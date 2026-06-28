@@ -38,22 +38,30 @@ export const TeamView: React.FC = () => {
       .toString()
       .trim()
       .toUpperCase()
-      .replace(/\s+/g, "")
-      .replace(/[^A-Z0-9]/g, "");
+      .replace(/\s+/g, "");
   };
 
   // Subordinates lists - مع تحسين المقارنة
   useEffect(() => {
     const currentCode = normalizeCode(currentUser.invitationCode);
+    
+    console.log("Current User Code:", currentCode);
+    console.log("Total Users in System:", users.length);
 
+    // Level 1 - Direct referrals
     const level1Members = users.filter(u => {
-      if (!u.referredBy) return false;
+      if (!u.referredBy || u.id === currentUser.id) return false;
       const userReferredBy = normalizeCode(u.referredBy);
-      return userReferredBy === currentCode;
+      const matches = userReferredBy === currentCode;
+      if (matches) {
+        console.log("Found Level 1 Member:", u.username, u.referredBy);
+      }
+      return matches;
     });
 
+    // Level 2 - Referrals of Level 1
     const level2Members = users.filter(u => {
-      if (!u.referredBy) return false;
+      if (!u.referredBy || u.id === currentUser.id) return false;
       const userReferredBy = normalizeCode(u.referredBy);
       return level1Members.some(l1 => {
         const l1Code = normalizeCode(l1.invitationCode);
@@ -61,8 +69,9 @@ export const TeamView: React.FC = () => {
       });
     });
 
+    // Level 3 - Referrals of Level 2
     const level3Members = users.filter(u => {
-      if (!u.referredBy) return false;
+      if (!u.referredBy || u.id === currentUser.id) return false;
       const userReferredBy = normalizeCode(u.referredBy);
       return level2Members.some(l2 => {
         const l2Code = normalizeCode(l2.invitationCode);
@@ -76,8 +85,11 @@ export const TeamView: React.FC = () => {
       ...level3Members.map(m => ({ ...m, level: 3 }))
     ];
 
+    console.log("Total Subordinates Found:", allSubordinates.length);
+    console.log("Level 1:", level1Members.length, "Level 2:", level2Members.length, "Level 3:", level3Members.length);
+
     setFilteredMembers(allSubordinates);
-  }, [users, currentUser.invitationCode]);
+  }, [users, currentUser?.id, currentUser?.invitationCode]);
 
   return (
     <div className={`p-4 flex flex-col gap-4 ${isRtl ? "text-right" : "text-left"}`} dir={isRtl ? "rtl" : "ltr"}>
