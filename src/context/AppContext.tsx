@@ -13,13 +13,14 @@ interface AppContextType {
   depositRequests: DepositRequest[];
   withdrawalRequests: WithdrawRequest[];
   login: (phone: string, password: string) => { success: boolean; error?: string };
-  register: (phone: string, email: string, password: string, inviteCode?: string) => Promise<{ success: boolean; error?: string }>;
+  register: (phone: string, email: string, password: string, inviteCode?: string, username?: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   rateProduct: (productId: string) => Promise<{ success: boolean; commission: number; error?: string }>;
   addDeposit: (amount: number, hash: string, network?: "trc20" | "polygon", screenshot?: string) => Promise<{ success: boolean; error?: string }>;
   addWithdrawal: (amount: number, address: string, network?: "trc20" | "polygon") => Promise<{ success: boolean; error?: string }>;
   upgradeVip: (level: number) => Promise<{ success: boolean; error?: string }>;
   updateUserWithdrawalAddress: (address: string, network?: "trc20" | "polygon") => Promise<void>;
+  changePassword: (newPassword: string) => Promise<{ success: boolean; error?: string }>;
   
   // Dynamic VIP levels & Tasks/Products
   vipTiers: VipTier[];
@@ -57,6 +58,31 @@ const DEFAULT_SETTINGS: AppSettings = {
   minWithdraw: 1,
   isHolidayEnabled: false,
   holidayDays: [5, 6]
+};
+
+const isPhoneMatch = (dbPhone: string, inputPhone: string): boolean => {
+  if (!dbPhone || !inputPhone) return false;
+  
+  // Clean both of non-digits
+  let p1 = dbPhone.trim().replace(/\D/g, "");
+  let p2 = inputPhone.trim().replace(/\D/g, "");
+  
+  // Strip leading zeros
+  while (p1.startsWith("0")) p1 = p1.substring(1);
+  while (p2.startsWith("0")) p2 = p2.substring(1);
+  
+  if (!p1 || !p2) return false;
+  
+  if (p1 === p2) return true;
+  
+  // If one of them has at least 8 digits, we can check suffix
+  if (p1.length >= 8 && p2.length >= 8) {
+    if (p1.endsWith(p2) || p2.endsWith(p1)) {
+      return true;
+    }
+  }
+  
+  return false;
 };
 
 const SEED_USERS: User[] = [
@@ -413,10 +439,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return { success: true };
     }
 
-    const user = users.find(u => (u.phone && u.phone.trim() === pTrim) || (u.email && u.email.toLowerCase().trim() === pTrim.toLowerCase()));
+    const user = users.find(u => (u.phone && isPhoneMatch(u.phone, pTrim)) || (u.email && u.email.toLowerCase().trim() === pTrim.toLowerCase()));
     if (user) {
       if (user.isAdmin && password !== "123ASDasd") {
         return { success: false, error: language === "ar" ? "كلمة مرور المسؤول غير صحيحة!" : "Incorrect Admin password!" };
+      }
+      if (!user.isAdmin && user.password && user.password !== password) {
+        return { success: false, error: language === "ar" ? "كلمة المرور غير صحيحة!" : "Incorrect password!" };
       }
       setCurrentUser(user);
       localStorage.setItem("apex_logged_in_user_id", user.id);
@@ -427,7 +456,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Register
-  const register = async (phone: string, email: string, password: string, inviteCode?: string) => {
+  const register = async (phone: string, email: string, password: string, inviteCode?: string, username?: string) => {
     if (!inviteCode || !inviteCode.trim()) {
       return { success: false, error: language === "ar" ? "رمز الدعوة مطلوب وإجباري للتسجيل!" : "Invitation code is mandatory!" };
     }
@@ -442,7 +471,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const cleanEmail = email ? email.trim().toLowerCase() : "";
 
     if (cleanPhone) {
-      const exists = users.some(u => u.phone && u.phone.trim() !== "" && u.phone.trim() === cleanPhone);
+      const exists = users.some(u => u.phone && u.phone.trim() !== "" && isPhoneMatch(u.phone, cleanPhone));
       if (exists) {
         return { success: false, error: language === "ar" ? "رقم الهاتف مسجل بالفعل!" : "Phone number already registered!" };
       }
@@ -457,7 +486,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const code = "INV" + Math.floor(100000 + Math.random() * 900000).toString();
     const newUser: User = {
       id: "u_" + Date.now(),
-      username: email ? email.split("@")[0] : "User_" + phone.slice(-4),
+      username: username?.trim() || (email ? email.split("@")[0] : "User_" + phone.slice(-4)),
       phone: phone || "",
       email: email || "",
       balance: 1.00, // Welcome gift
@@ -468,11 +497,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       totalCompletedTasks: 0,
       invitationCode: code,
       referredBy: inviter.invitationCode.toUpperCase().trim(),
+      password: password,
       createdAt: new Date().toISOString()
     };
 
     // Save to Firestore
-    
+    await setDoc(doc(db, "users", newUser.id), newUser);
+
+    // Reward the inviter with $5.00
+    await updateDoc(doc(db, "users", inviter.id), {
+      balance: parseFloat((inviter.balance + 5.00).toFixed(2))
+    });
 
     localStorage.setItem("apex_logged_in_user_id", newUser.id);
     setCurrentUser(newUser);
@@ -644,6 +679,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  // Change current user's password
+  const changePassword = async (newPassword: string) => {
+    if (!currentUser) return { success: false, error: language === "ar" ? "يجب تسجيل الدخول أولاً!" : "Must log in first!" };
+    try {
+      await updateDoc(doc(db, "users", currentUser.id), { password: newPassword });
+      // Update local state current user password so it doesn't mismatch during current session
+      setCurrentUser(prev => prev ? { ...prev, password: newPassword } : null);
+      return { success: true };
+    } catch (err: any) {
+      console.error("Failed to change password:", err);
+      return { success: false, error: err.message || "Failed to change password" };
+    }
+  };
+
   // Admin: Approve Deposit
   const adminApproveDeposit = async (depositId: string) => {
     const deposit = depositRequests.find(d => d.id === depositId);
@@ -779,6 +828,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addWithdrawal,
         upgradeVip,
         updateUserWithdrawalAddress,
+        changePassword,
         vipTiers,
         products,
         adminAddVipTier,
