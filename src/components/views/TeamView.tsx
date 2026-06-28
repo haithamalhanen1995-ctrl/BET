@@ -208,7 +208,7 @@ export const TeamView: React.FC = () => {
                     }`}></span>
                     <div>
                       <h4 className="text-xs font-bold text-white font-mono">{sub.username}</h4>
-                      <p className="text-[10px] text-slate-400 mt-0.5">{sub.phone}</p>
+                      <p className="text-[10px] text-slate-400 mt-0.5">{sub.phone || sub.email}</p>
                     </div>
                   </div>
 

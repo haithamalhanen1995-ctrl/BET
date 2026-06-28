@@ -504,6 +504,7 @@ export const AdminView: React.FC = () => {
                   const isDeleting = deleteConfirmId === user.id;
                   const isZeroing = zeroConfirmId === user.id;
                   const isZeroingTasks = zeroTasksConfirmId === user.id;
+                  const referralsCount = users.filter(u => u.referredBy && u.referredBy.toUpperCase().trim() === user.invitationCode?.toUpperCase().trim()).length;
 
                   return (
                     <div key={user.id} className="bg-slate-950 border border-slate-850 rounded-xl p-3.5 space-y-3 text-xs relative">
@@ -514,6 +515,22 @@ export const AdminView: React.FC = () => {
                           <strong className="text-white text-sm block font-mono">@{user.username} {user.isAdmin && <span className="text-amber-500 font-black text-[10px] ml-1 bg-amber-500/10 px-1 py-0.5 rounded">ADMIN</span>}</strong>
                           <span className="text-[10px] text-slate-400 font-mono mt-0.5 block">{user.phone}</span>
                           <span className="text-[9px] text-slate-500 block mt-0.5 font-mono">Registered: {new Date(user.createdAt).toLocaleDateString()}</span>
+                          
+                          {/* Password & Referral Info */}
+                          <div className="mt-2 flex flex-col gap-1 text-[10px] font-mono bg-slate-900/40 p-2 rounded-lg border border-slate-900/80">
+                            <div className="flex items-center gap-1.5 text-slate-400">
+                              <span className="text-slate-500">{language === "ar" ? "كلمة المرور:" : "Password:"}</span>
+                              <span className="font-bold select-all text-amber-500 bg-slate-950 px-1.5 py-0.5 rounded border border-slate-850">{user.password || "N/A"}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 text-slate-400">
+                              <span className="text-slate-500">{language === "ar" ? "رمز الدعوة:" : "Invite Code:"}</span>
+                              <span className="font-bold text-slate-300 bg-slate-950 px-1.5 py-0.5 rounded border border-slate-850">{user.invitationCode || "N/A"}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 text-slate-400">
+                              <span className="text-slate-500">{language === "ar" ? "الأعضاء المدعوين:" : "Invited Members:"}</span>
+                              <span className="font-bold text-indigo-400 bg-indigo-500/10 px-1.5 py-0.5 rounded border border-indigo-500/20">{referralsCount}</span>
+                            </div>
+                          </div>
                           
                           {/* Current Earnings Display */}
                           <div className="text-[10px] text-slate-400 font-mono mt-1.5 space-y-0.5 bg-slate-900/50 p-1.5 rounded-lg border border-slate-900">

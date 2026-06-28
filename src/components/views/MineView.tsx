@@ -4,6 +4,34 @@ import { translations } from "../../data/translations";
 import { User, LogIn, UserPlus, CreditCard, Wallet, ClipboardList, LogOut, ArrowDownLeft, ArrowUpRight, Copy, CheckCircle2, ShieldAlert, AlertCircle, Phone, Lock, Eye, EyeOff, Mail, Calendar } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
+const countries = [
+  { nameAr: "العراق", nameEn: "Iraq", code: "+964" },
+  { nameAr: "السعودية", nameEn: "Saudi Arabia", code: "+966" },
+  { nameAr: "الإمارات", nameEn: "UAE", code: "+971" },
+  { nameAr: "الكويت", nameEn: "Kuwait", code: "+965" },
+  { nameAr: "قطر", nameEn: "Qatar", code: "+974" },
+  { nameAr: "عمان", nameEn: "Oman", code: "+968" },
+  { nameAr: "البحرين", nameEn: "Bahrain", code: "+973" },
+  { nameAr: "مصر", nameEn: "Egypt", code: "+20" },
+  { nameAr: "الأردن", nameEn: "Jordan", code: "+962" },
+  { nameAr: "لبنان", nameEn: "Lebanon", code: "+961" },
+  { nameAr: "سوريا", nameEn: "Syria", code: "+963" },
+  { nameAr: "اليمن", nameEn: "Yemen", code: "+967" },
+  { nameAr: "فلسطين", nameEn: "Palestine", code: "+970" },
+  { nameAr: "المغرب", nameEn: "Morocco", code: "+212" },
+  { nameAr: "الجزائر", nameEn: "Algeria", code: "+213" },
+  { nameAr: "تونس", nameEn: "Tunisia", code: "+216" },
+  { nameAr: "ليبيا", nameEn: "Libya", code: "+218" },
+  { nameAr: "السودان", nameEn: "Sudan", code: "+249" },
+  { nameAr: "الولايات المتحدة", nameEn: "USA", code: "+1" },
+  { nameAr: "المملكة المتحدة", nameEn: "UK", code: "+44" },
+  { nameAr: "تركيا", nameEn: "Turkey", code: "+90" },
+  { nameAr: "ألمانيا", nameEn: "Germany", code: "+49" },
+  { nameAr: "فرنسا", nameEn: "France", code: "+33" },
+  { nameAr: "السويد", nameEn: "Sweden", code: "+46" },
+  { nameAr: "هولندا", nameEn: "Netherlands", code: "+31" },
+];
+
 export const MineView: React.FC = () => {
   const {
     language,
@@ -15,6 +43,7 @@ export const MineView: React.FC = () => {
     addDeposit,
     addWithdrawal,
     updateUserWithdrawalAddress,
+    changePassword,
     depositRequests,
     withdrawalRequests,
     setIsAdminMode,
@@ -36,6 +65,8 @@ export const MineView: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [authError, setAuthError] = useState("");
   const [authSuccess, setAuthSuccess] = useState("");
+  const [regName, setRegName] = useState("");
+  const [countryCode, setCountryCode] = useState("+964");
 
   // Parse referral code from URL parameters when mounting
   React.useEffect(() => {
@@ -50,11 +81,23 @@ export const MineView: React.FC = () => {
     if (code) {
       setInviteCode(code);
       setAuthMode("register");
+      localStorage.setItem("apex_pending_invite", code);
+    } else {
+      const savedCode = localStorage.getItem("apex_pending_invite");
+      if (savedCode) {
+        setInviteCode(savedCode);
+        setAuthMode("register");
+      }
     }
   }, []);
 
   // Menu action overlays
-  const [activeOverlay, setActiveOverlay] = useState<"none" | "personal" | "funding" | "deposit" | "withdraw" | "deposit_record" | "withdraw_record">("none");
+  const [activeOverlay, setActiveOverlay] = useState<"none" | "personal" | "funding" | "deposit" | "withdraw" | "deposit_record" | "withdraw_record" | "change_password">("none");
+
+  // Change password states
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
 
   // Input states for deposit/withdrawal
   const [depositAmount, setDepositAmount] = useState("");
@@ -140,17 +183,37 @@ export const MineView: React.FC = () => {
         setAuthError(result.error || t.authError);
       }
     } else {
-      const finalPhone = registerMethod === "phone" ? phone : "";
-      const finalEmail = registerMethod === "email" ? email : "";
+      let finalPhone = "";
+      const finalEmail = registerMethod === "email" ? email.trim() : "";
 
-      if (registerMethod === "phone" && !phone) {
-        setAuthError(language === "ar" ? "رقم الهاتف مطلوب للإنشاء." : "Phone number is required for registration.");
+      if (!regName.trim()) {
+        setAuthError(language === "ar" ? "الاسم الكامل مطلوب للتسجيل." : "Full name is required for registration.");
         return;
       }
-      if (registerMethod === "email" && !email) {
-        setAuthError(language === "ar" ? "البريد الإلكتروني مطلوب للإنشاء." : "Email is required for registration.");
-        return;
+
+      if (registerMethod === "phone") {
+        if (!phone.trim()) {
+          setAuthError(language === "ar" ? "رقم الهاتف مطلوب للإنشاء." : "Phone number is required for registration.");
+          return;
+        }
+        let cleanPhoneNum = phone.trim();
+        if (cleanPhoneNum.startsWith("0")) {
+          cleanPhoneNum = cleanPhoneNum.substring(1);
+        }
+        finalPhone = `${countryCode}${cleanPhoneNum}`;
       }
+
+      if (registerMethod === "email") {
+        if (!email.trim()) {
+          setAuthError(language === "ar" ? "البريد الإلكتروني مطلوب للإنشاء." : "Email is required for registration.");
+          return;
+        }
+        if (!email.toLowerCase().trim().endsWith("@gmail.com")) {
+          setAuthError(language === "ar" ? "البريد الإلكتروني يجب أن ينتهي بـ @gmail.com" : "Email address must end with @gmail.com");
+          return;
+        }
+      }
+
       if (!inviteCode || !inviteCode.trim()) {
         setAuthError(language === "ar" ? "رمز الدعوة مطلوب وإجباري للتسجيل!" : "Invitation code is mandatory!");
         return;
@@ -159,9 +222,10 @@ export const MineView: React.FC = () => {
         setAuthError(t.passwordMismatch);
         return;
       }
-      const result = await register(finalPhone, finalEmail, password, inviteCode);
+      const result = await register(finalPhone, finalEmail, password, inviteCode, regName);
       if (result.success) {
         setAuthSuccess(t.authSuccess);
+        localStorage.removeItem("apex_pending_invite");
       } else {
         setAuthError(result.error || t.authError);
       }
@@ -375,6 +439,24 @@ export const MineView: React.FC = () => {
                 </div>
               </div>
 
+              {/* Name (الاسم) Field */}
+              <div>
+                <label className="text-[10px] text-slate-400 uppercase font-black block mb-1">
+                  {language === "ar" ? "الاسم" : "Name"} <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                  <input
+                    type="text"
+                    required
+                    value={regName}
+                    onChange={(e) => setRegName(e.target.value)}
+                    placeholder={language === "ar" ? "أدخل اسمك الكامل" : "Enter your full name"}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl py-3 pl-10 pr-4 text-xs text-white placeholder:text-slate-600 focus:outline-hidden focus:border-amber-500"
+                  />
+                </div>
+              </div>
+
               {registerMethod === "email" ? (
                 <div>
                   <label className="text-[10px] text-slate-400 uppercase font-black block mb-1">
@@ -387,26 +469,44 @@ export const MineView: React.FC = () => {
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="email@domain.com"
+                      placeholder="email@gmail.com"
                       className="w-full bg-slate-900 border border-slate-800 rounded-xl py-3 pl-10 pr-4 text-xs text-white placeholder:text-slate-600 focus:outline-hidden focus:border-amber-500 font-mono"
                     />
                   </div>
                 </div>
               ) : (
-                <div>
-                  <label className="text-[10px] text-slate-400 uppercase font-black block mb-1">
-                    {language === "ar" ? "رقم الهاتف" : "Phone Number"} <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                    <input
-                      type="text"
-                      required
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="e.g. +9647700000000"
-                      className="w-full bg-slate-900 border border-slate-800 rounded-xl py-3 pl-10 pr-4 text-xs text-white placeholder:text-slate-600 focus:outline-hidden focus:border-amber-500 font-mono"
-                    />
+                <div className="flex gap-2 items-end">
+                  <div className="w-[120px] shrink-0">
+                    <label className="text-[10px] text-slate-400 uppercase font-black block mb-1">
+                      {language === "ar" ? "مفتاح الدولة" : "Country Key"}
+                    </label>
+                    <select
+                      value={countryCode}
+                      onChange={(e) => setCountryCode(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl py-3 px-2 text-xs text-white focus:outline-hidden focus:border-amber-500 font-mono cursor-pointer h-[44px]"
+                    >
+                      {countries.map((c) => (
+                        <option key={c.code} value={c.code} className="bg-slate-950 text-white">
+                          {language === "ar" ? c.nameAr : c.nameEn} ({c.code})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex-1">
+                    <label className="text-[10px] text-slate-400 uppercase font-black block mb-1">
+                      {language === "ar" ? "رقم الهاتف" : "Phone Number"} <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                      <input
+                        type="tel"
+                        required
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder={language === "ar" ? "مثال: 7701234567" : "e.g. 7701234567"}
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl py-3 pl-10 pr-4 text-xs text-white placeholder:text-slate-600 focus:outline-hidden focus:border-amber-500 font-mono"
+                      />
+                    </div>
                   </div>
                 </div>
               )}
@@ -607,6 +707,24 @@ export const MineView: React.FC = () => {
           <div className="flex items-center gap-3">
             <User className="w-4 h-4 text-amber-500" />
             <span className="text-xs font-bold">{t.personalInfo}</span>
+          </div>
+          <span className="text-slate-600 text-xs">➔</span>
+        </button>
+
+        {/* Change Password */}
+        <button
+          onClick={() => {
+            setActionError("");
+            setActionSuccess("");
+            setNewPassword("");
+            setConfirmNewPassword("");
+            setActiveOverlay("change_password");
+          }}
+          className="w-full flex items-center justify-between py-3 px-2 text-slate-200 hover:text-white transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <Lock className="w-4 h-4 text-amber-500" />
+            <span className="text-xs font-bold">{language === "ar" ? "تغيير كلمة المرور" : "Change Password"}</span>
           </div>
           <span className="text-slate-600 text-xs">➔</span>
         </button>
@@ -1249,6 +1367,117 @@ export const MineView: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setActiveOverlay("none")}
+                      className="flex-1 bg-slate-800 hover:bg-slate-750 text-slate-400 font-bold py-2.5 rounded-xl text-xs"
+                    >
+                      {t.back}
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* CHANGE PASSWORD OVERLAY */}
+              {activeOverlay === "change_password" && (
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    setActionError("");
+                    setActionSuccess("");
+                    
+                    if (!newPassword.trim()) {
+                      setActionError(language === "ar" ? "يرجى إدخال كلمة المرور الجديدة" : "Please enter a new password");
+                      return;
+                    }
+                    if (newPassword !== confirmNewPassword) {
+                      setActionError(language === "ar" ? "كلمات المرور غير متطابقة" : "Passwords do not match");
+                      return;
+                    }
+                    
+                    const res = await changePassword(newPassword);
+                    if (res.success) {
+                      setActionSuccess(language === "ar" ? "تم تغيير كلمة المرور بنجاح!" : "Password changed successfully!");
+                      setNewPassword("");
+                      setConfirmNewPassword("");
+                    } else {
+                      setActionError(res.error || (language === "ar" ? "فشل تغيير كلمة المرور" : "Failed to change password"));
+                    }
+                  }}
+                  className="space-y-4"
+                >
+                  <h3 className="text-base font-black text-amber-500 mb-2 uppercase text-center">
+                    {language === "ar" ? "تغيير كلمة المرور" : "Change Password"}
+                  </h3>
+                  
+                  <div className="space-y-3 text-xs">
+                    <div>
+                      <label className="text-[10px] text-slate-400 block mb-1 font-bold">
+                        {language === "ar" ? "كلمة المرور الجديدة" : "New Password"}
+                      </label>
+                      <div className="relative">
+                        <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                        <input
+                          type={showNewPassword ? "text" : "password"}
+                          required
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          placeholder={language === "ar" ? "أدخل كلمة المرور الجديدة" : "Enter new password"}
+                          className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-10 py-2.5 text-xs text-white placeholder:text-slate-600 focus:outline-hidden focus:border-amber-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowNewPassword(!showNewPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"
+                        >
+                          {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <label className="text-[10px] text-slate-400 block mb-1 font-bold">
+                        {language === "ar" ? "تأكيد كلمة المرور الجديدة" : "Confirm New Password"}
+                      </label>
+                      <div className="relative">
+                        <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                        <input
+                          type="password"
+                          required
+                          value={confirmNewPassword}
+                          onChange={(e) => setConfirmNewPassword(e.target.value)}
+                          placeholder={language === "ar" ? "تأكيد كلمة المرور" : "Confirm password"}
+                          className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder:text-slate-600 focus:outline-hidden focus:border-amber-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {actionError && (
+                    <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-2.5 rounded-xl text-[11px] flex items-start gap-1">
+                      <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                      <span>{actionError}</span>
+                    </div>
+                  )}
+
+                  {actionSuccess && (
+                    <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 p-2.5 rounded-xl text-[11px] flex items-start gap-1">
+                      <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                      <span>{actionSuccess}</span>
+                    </div>
+                  )}
+
+                  <div className="flex gap-2 pt-2">
+                    <button
+                      type="submit"
+                      className="flex-1 bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-slate-950 font-black py-2.5 rounded-xl text-xs cursor-pointer"
+                    >
+                      {language === "ar" ? "حفظ التغييرات" : "Save Changes"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveOverlay("none");
+                        setNewPassword("");
+                        setConfirmNewPassword("");
+                      }}
                       className="flex-1 bg-slate-800 hover:bg-slate-750 text-slate-400 font-bold py-2.5 rounded-xl text-xs"
                     >
                       {t.back}
