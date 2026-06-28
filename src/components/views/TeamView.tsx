@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useApp } from "../../context/AppContext";
 import { translations } from "../../data/translations";
 import { Users, Copy, CheckCircle2, Award, TrendingUp, DollarSign, ListFilter } from "lucide-react";
@@ -8,10 +8,10 @@ export const TeamView: React.FC = () => {
   const { language, currentUser, getTeamReport, users, vipTiers } = useApp();
   const t = translations[language];
   const isRtl = language === "ar";
-
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
   const [activeTab, setActiveTab] = useState<"summary" | "members">("summary");
+  const [filteredMembers, setFilteredMembers] = useState<any[]>([]);
 
   if (!currentUser) return null;
 
@@ -31,16 +31,53 @@ export const TeamView: React.FC = () => {
     setTimeout(() => setCopiedLink(false), 2000);
   };
 
-  // Subordinates lists
-  const level1Members = users.filter(u => u.referredBy && u.referredBy.toUpperCase().trim() === currentUser.invitationCode.toUpperCase().trim());
-  const level2Members = users.filter(u => u.referredBy && level1Members.some(l1 => l1.invitationCode.toUpperCase().trim() === u.referredBy.toUpperCase().trim()));
-  const level3Members = users.filter(u => u.referredBy && level2Members.some(l2 => l2.invitationCode.toUpperCase().trim() === u.referredBy.toUpperCase().trim()));
+  // دالة لتنظيف ومقارنة الأكواد بشكل آمن
+  const normalizeCode = (code: string): string => {
+    if (!code) return "";
+    return code
+      .toString()
+      .trim()
+      .toUpperCase()
+      .replace(/\s+/g, "")
+      .replace(/[^A-Z0-9]/g, "");
+  };
 
-  const allSubordinates = [
-    ...level1Members.map(m => ({ ...m, level: 1 })),
-    ...level2Members.map(m => ({ ...m, level: 2 })),
-    ...level3Members.map(m => ({ ...m, level: 3 }))
-  ];
+  // Subordinates lists - مع تحسين المقارنة
+  useEffect(() => {
+    const currentCode = normalizeCode(currentUser.invitationCode);
+
+    const level1Members = users.filter(u => {
+      if (!u.referredBy) return false;
+      const userReferredBy = normalizeCode(u.referredBy);
+      return userReferredBy === currentCode;
+    });
+
+    const level2Members = users.filter(u => {
+      if (!u.referredBy) return false;
+      const userReferredBy = normalizeCode(u.referredBy);
+      return level1Members.some(l1 => {
+        const l1Code = normalizeCode(l1.invitationCode);
+        return userReferredBy === l1Code;
+      });
+    });
+
+    const level3Members = users.filter(u => {
+      if (!u.referredBy) return false;
+      const userReferredBy = normalizeCode(u.referredBy);
+      return level2Members.some(l2 => {
+        const l2Code = normalizeCode(l2.invitationCode);
+        return userReferredBy === l2Code;
+      });
+    });
+
+    const allSubordinates = [
+      ...level1Members.map(m => ({ ...m, level: 1 })),
+      ...level2Members.map(m => ({ ...m, level: 2 })),
+      ...level3Members.map(m => ({ ...m, level: 3 }))
+    ];
+
+    setFilteredMembers(allSubordinates);
+  }, [users, currentUser.invitationCode]);
 
   return (
     <div className={`p-4 flex flex-col gap-4 ${isRtl ? "text-right" : "text-left"}`} dir={isRtl ? "rtl" : "ltr"}>
@@ -61,7 +98,9 @@ export const TeamView: React.FC = () => {
             <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block mb-1">
               {t.myInviteCode}
             </span>
-            <span className="text-sm font-black font-mono text-amber-400 select-all">{currentUser.invitationCode}</span>
+            <span className="text-sm font-black font-mono text-amber-400 select-all">
+              {currentUser.invitationCode}
+            </span>
           </div>
           <button
             onClick={handleCopyCode}
@@ -107,7 +146,7 @@ export const TeamView: React.FC = () => {
             activeTab === "members" ? "border-amber-400 text-amber-400 font-black" : "border-transparent text-slate-400 hover:text-white"
           }`}
         >
-          {language === "ar" ? `الأعضاء (${allSubordinates.length})` : `Members (${allSubordinates.length})`}
+          {language === "ar" ? `الأعضاء (${filteredMembers.length})` : `Members (${filteredMembers.length})`}
         </button>
       </div>
 
@@ -119,7 +158,7 @@ export const TeamView: React.FC = () => {
             <div className="bg-slate-900 p-3.5 rounded-xl border border-slate-850">
               <Users className="w-4 h-4 mx-auto mb-1 text-blue-400" />
               <span className="text-[9px] text-slate-400 block">{t.registeredMembers}</span>
-              <span className="text-sm font-black text-white font-mono">{allSubordinates.length}</span>
+              <span className="text-sm font-black text-white font-mono">{filteredMembers.length}</span>
             </div>
             <div className="bg-slate-900 p-3.5 rounded-xl border border-slate-850">
               <TrendingUp className="w-4 h-4 mx-auto mb-1 text-emerald-400" />
@@ -191,21 +230,25 @@ export const TeamView: React.FC = () => {
       ) : (
         /* MEMBERS DIRECTORY */
         <div className="space-y-2">
-          {allSubordinates.length === 0 ? (
+          {filteredMembers.length === 0 ? (
             <div className="text-center py-10 bg-slate-900/40 rounded-2xl border border-slate-900">
               <Users className="w-8 h-8 text-slate-600 mx-auto mb-2" />
               <p className="text-xs text-slate-500">
-                {language === "ar" ? "لا يوجد أعضاء مسجلين تحت كود إحالتك حتى الآن." : "No registered members under your code yet."}
+                {language === "ar"
+                  ? "لا يوجد أعضاء مسجلين تحت كود إحالتك حتى الآن."
+                  : "No registered members under your code yet."}
               </p>
             </div>
           ) : (
             <div className="space-y-2">
-              {allSubordinates.map((sub, idx) => (
+              {filteredMembers.map((sub, idx) => (
                 <div key={sub.id + idx} className="bg-slate-900 px-4 py-3 rounded-xl border border-slate-850 flex justify-between items-center">
                   <div className="flex items-center gap-2.5">
-                    <span className={`w-2 h-2 rounded-full ${
-                      sub.level === 1 ? "bg-amber-400" : sub.level === 2 ? "bg-blue-400" : "bg-purple-400"
-                    }`}></span>
+                    <span
+                      className={`w-2 h-2 rounded-full ${
+                        sub.level === 1 ? "bg-amber-400" : sub.level === 2 ? "bg-blue-400" : "bg-purple-400"
+                      }`}
+                    ></span>
                     <div>
                       <h4 className="text-xs font-bold text-white font-mono">{sub.username}</h4>
                       <p className="text-[10px] text-slate-400 mt-0.5">{sub.phone}</p>
