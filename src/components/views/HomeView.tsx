@@ -187,7 +187,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
         <div className="flex-1 overflow-hidden relative h-5 flex items-center">
           <div className="absolute whitespace-nowrap text-xs text-amber-200 font-bold animate-marquee-ltr">
             {language === "ar" 
-              ? "اعلان مهم: من الاسبوع القادم ستكون عطلة يومي الجمعة والسبت" 
+              ? "اعلان مهم: لايوجد عطلة عمل طيلة ايام الاسبوع / السحب من ساعة الى 48 ساعة " 
               : "Important Announcement: Starting next week, Friday and Saturday will be weekend holidays"}
           </div>
         </div>
