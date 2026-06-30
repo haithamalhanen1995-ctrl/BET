@@ -26,7 +26,8 @@ export const AdminView: React.FC = () => {
     adminDeleteVipTier,
     adminAddProduct,
     adminUpdateProduct,
-    adminDeleteProduct
+    adminDeleteProduct,
+    adminAddManualWithdrawal
   } = useApp();
 
   const t = translations[language];
@@ -74,6 +75,13 @@ export const AdminView: React.FC = () => {
   const [vipDailyProfitInput, setVipDailyProfitInput] = useState("");
   const [vipSingleTaskRewardInput, setVipSingleTaskRewardInput] = useState("");
   const [vipBgInput, setVipBgInput] = useState("from-amber-500 to-yellow-600");
+
+  // Manual Withdrawal states
+  const [manualWithdrawUserId, setManualWithdrawUserId] = useState<string | null>(null);
+  const [manualWithdrawAmount, setManualWithdrawAmount] = useState("");
+  const [manualWithdrawAddress, setManualWithdrawAddress] = useState("");
+  const [manualWithdrawDate, setManualWithdrawDate] = useState("");
+  const [manualWithdrawStatus, setManualWithdrawStatus] = useState<"approved" | "pending" | "rejected">("approved");
 
   // Products/Tasks states
   const [isEditingProduct, setIsEditingProduct] = useState(false);
@@ -780,6 +788,21 @@ export const AdminView: React.FC = () => {
                               <span>{isDeleting ? (language === "ar" ? "تأكيد حذف الحساب؟" : "Confirm Delete Account?") : (language === "ar" ? "حذف الحساب" : "Delete Account")}</span>
                             </button>
                           )}
+
+                          {/* Manual Withdrawal Button */}
+                          <button
+                            onClick={() => {
+                              setManualWithdrawUserId(user.id);
+                              setManualWithdrawAddress(user.withdrawalAddress || "");
+                              setManualWithdrawAmount("");
+                              setManualWithdrawDate(new Date().toISOString().slice(0, 10));
+                              setManualWithdrawStatus("approved");
+                            }}
+                            className="px-2 py-1.5 rounded-xl text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20"
+                          >
+                            <ArrowUpRight className="w-3 h-3" />
+                            <span>{language === "ar" ? "إضافة سحب" : "Add Withdrawal"}</span>
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -1366,6 +1389,97 @@ export const AdminView: React.FC = () => {
         )}
 
       </div>
+
+      {/* Manual Withdrawal Modal */}
+      {manualWithdrawUserId && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 w-full max-w-sm space-y-4">
+            <h3 className="text-sm font-black text-amber-500 uppercase text-center">
+              {language === "ar" ? "إضافة سحب يدوي" : "Add Manual Withdrawal"}
+            </h3>
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="text-[10px] text-slate-400 font-bold block mb-1 text-right">
+                  {language === "ar" ? "المبلغ (USDT)" : "Amount (USDT)"}
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={manualWithdrawAmount}
+                  onChange={e => setManualWithdrawAmount(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white font-mono text-right"
+                  placeholder="0.00"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] text-slate-400 font-bold block mb-1 text-right">
+                  {language === "ar" ? "عنوان المحفظة" : "Wallet Address"}
+                </label>
+                <input
+                  type="text"
+                  value={manualWithdrawAddress}
+                  onChange={e => setManualWithdrawAddress(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white font-mono text-right text-[10px]"
+                  placeholder="0x..."
+                />
+              </div>
+              <div>
+                <label className="text-[10px] text-slate-400 font-bold block mb-1 text-right">
+                  {language === "ar" ? "التاريخ" : "Date"}
+                </label>
+                <input
+                  type="date"
+                  value={manualWithdrawDate}
+                  onChange={e => setManualWithdrawDate(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-right"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] text-slate-400 font-bold block mb-1 text-right">
+                  {language === "ar" ? "الحالة" : "Status"}
+                </label>
+                <select
+                  value={manualWithdrawStatus}
+                  onChange={e => setManualWithdrawStatus(e.target.value as any)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-right cursor-pointer"
+                >
+                  <option value="approved">{language === "ar" ? "مكتمل" : "Approved"}</option>
+                  <option value="pending">{language === "ar" ? "قيد الانتظار" : "Pending"}</option>
+                  <option value="rejected">{language === "ar" ? "مرفوض" : "Rejected"}</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={async () => {
+                  const user = users.find(u => u.id === manualWithdrawUserId);
+                  if (!user) return;
+                  const amount = parseFloat(manualWithdrawAmount);
+                  if (isNaN(amount) || amount <= 0) {
+                    alert(language === "ar" ? "يرجى إدخال مبلغ صحيح!" : "Please enter a valid amount!");
+                    return;
+                  }
+                  const createdAt = manualWithdrawDate ? new Date(manualWithdrawDate).toISOString() : new Date().toISOString();
+                  await adminAddManualWithdrawal(user.id, user.username, user.phone, amount, manualWithdrawAddress, manualWithdrawStatus, createdAt);
+                  setManualWithdrawUserId(null);
+                  setManualWithdrawAmount("");
+                  setManualWithdrawAddress("");
+                  alert(language === "ar" ? "تمت إضافة السحب بنجاح!" : "Withdrawal added successfully!");
+                }}
+                className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black py-2 rounded-xl text-xs cursor-pointer"
+              >
+                {language === "ar" ? "حفظ" : "Save"}
+              </button>
+              <button
+                onClick={() => setManualWithdrawUserId(null)}
+                className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-400 font-bold py-2 rounded-xl text-xs cursor-pointer"
+              >
+                {language === "ar" ? "إلغاء" : "Cancel"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Expanded Image Modal for Screenshots */}
       {expandedImage && (
