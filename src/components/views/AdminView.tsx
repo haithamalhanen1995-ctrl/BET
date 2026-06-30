@@ -1,4 +1,4 @@
-Import React, { useState } from "react";
+import React, { useState } from "react";
 import { useApp } from "../../context/AppContext";
 import { translations } from "../../data/translations";
 import { ShieldAlert, Users, Landmark, AlertCircle, Settings, ClipboardCheck, ArrowUpRight, ArrowDownLeft, Trash2, Check, X, Search, Coins, Award, Plus, Edit2 } from "lucide-react";
@@ -1451,7 +1451,7 @@ export const AdminView: React.FC = () => {
             </div>
             <div className="flex gap-2 pt-1">
               <button
-                onClick={async () => {
+                onClick={() => {
                   const user = users.find(u => u.id === manualWithdrawUserId);
                   if (!user) return;
                   const amount = parseFloat(manualWithdrawAmount);
@@ -1460,11 +1460,12 @@ export const AdminView: React.FC = () => {
                     return;
                   }
                   const createdAt = manualWithdrawDate ? new Date(manualWithdrawDate).toISOString() : new Date().toISOString();
-                  await adminAddManualWithdrawal(user.id, user.username, user.phone, amount, manualWithdrawAddress, manualWithdrawStatus, createdAt);
-                  setManualWithdrawUserId(null);
-                  setManualWithdrawAmount("");
-                  setManualWithdrawAddress("");
-                  alert(language === "ar" ? "تمت إضافة السحب بنجاح!" : "Withdrawal added successfully!");
+                  adminAddManualWithdrawal(user.id, user.username, user.phone, amount, manualWithdrawAddress, manualWithdrawStatus, createdAt).then(() => {
+                    setManualWithdrawUserId(null);
+                    setManualWithdrawAmount("");
+                    setManualWithdrawAddress("");
+                    alert(language === "ar" ? "تمت إضافة السحب بنجاح!" : "Withdrawal added successfully!");
+                  });
                 }}
                 className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black py-2 rounded-xl text-xs cursor-pointer"
               >
