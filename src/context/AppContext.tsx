@@ -41,6 +41,7 @@ interface AppContextType {
   adminRejectWithdrawal: (withdrawalId: string) => Promise<void>;
   adminUpdateUser: (userId: string, fields: Partial<User>) => Promise<void>;
   adminDeleteUser: (userId: string) => Promise<void>;
+  adminAddManualWithdrawal: (userId: string, username: string, phone: string, amount: number, address: string, status: "approved" | "pending" | "rejected", createdAt: string) => Promise<void>;
   adminUpdateSettings: (fields: Partial<AppSettings>) => Promise<void>;
   getTeamReport: (userId: string) => TeamReport;
   isLoading: boolean;
@@ -505,7 +506,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     await setDoc(doc(db, "users", newUser.id), newUser);
 
     // Reward the inviter with $5.00
-    
+    await updateDoc(doc(db, "users", inviter.id), {
+      balance: parseFloat((inviter.balance + 5.00).toFixed(2))
+    });
 
     localStorage.setItem("apex_logged_in_user_id", newUser.id);
     setCurrentUser(newUser);
@@ -752,6 +755,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     await deleteDoc(doc(db, "users", userId));
   };
 
+  // Admin: Add Manual Withdrawal Record
+  const adminAddManualWithdrawal = async (userId: string, username: string, phone: string, amount: number, address: string, status: "approved" | "pending" | "rejected", createdAt: string) => {
+    const id = "manual_" + Date.now().toString() + "_" + userId.slice(0, 4);
+    await setDoc(doc(db, "withdrawalRequests", id), {
+      id,
+      userId,
+      username,
+      phone,
+      amount,
+      address,
+      status,
+      network: "trc20",
+      createdAt
+    });
+  };
+
   // Admin: Update global App Settings
   const adminUpdateSettings = async (fields: Partial<AppSettings>) => {
     await updateDoc(doc(db, "settings", "global"), fields);
@@ -843,6 +862,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         adminRejectWithdrawal,
         adminUpdateUser,
         adminDeleteUser,
+        adminAddManualWithdrawal,
         adminUpdateSettings,
         getTeamReport,
         isLoading
