@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { AppProvider, useApp } from "./context/AppContext";
 import { PhoneFrame } from "./components/PhoneFrame";
 import { HomeView } from "./components/views/HomeView";
@@ -15,13 +15,84 @@ import { AdminView } from "./components/views/AdminView";
 import { LoginPrompt } from "./components/LoginPrompt";
 import { translations } from "./data/translations";
 import { Home, PlayCircle, Award, Users, User, ShieldAlert, MessageCircle, Send } from "lucide-react";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
+
+function SplashScreen({ onDone }: { onDone: () => void }) {
+  useEffect(() => {
+    const timer = setTimeout(onDone, 2800);
+    return () => clearTimeout(timer);
+  }, [onDone]);
+
+  return (
+    <div className="fixed inset-0 bg-slate-950 flex flex-col items-center justify-center z-[9999]">
+      {/* Glow background */}
+      <div className="absolute w-64 h-64 rounded-full bg-amber-500/10 blur-3xl pointer-events-none" />
+
+      {/* Logo ring */}
+      <motion.div
+        initial={{ scale: 0.5, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+        className="relative flex items-center justify-center mb-6"
+      >
+        <div className="w-24 h-24 rounded-full border-4 border-amber-500/30 flex items-center justify-center shadow-[0_0_40px_rgba(245,158,11,0.25)]">
+          <span className="text-4xl font-black bg-gradient-to-b from-amber-400 to-yellow-600 bg-clip-text text-transparent">★</span>
+        </div>
+        {/* Spinning ring */}
+        <div className="absolute w-28 h-28 rounded-full border-4 border-transparent border-t-amber-500 animate-spin" />
+      </motion.div>
+
+      {/* App name */}
+      <motion.h1
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4, duration: 0.5 }}
+        className="text-3xl font-black bg-gradient-to-r from-amber-400 to-yellow-200 bg-clip-text text-transparent tracking-widest mb-2"
+      >
+        BET
+      </motion.h1>
+
+      <motion.p
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.7, duration: 0.5 }}
+        className="text-slate-500 text-xs tracking-widest uppercase font-bold mb-10"
+      >
+        Premium Platform
+      </motion.p>
+
+      {/* Loading bar */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.9 }}
+        className="w-40 h-1 bg-slate-800 rounded-full overflow-hidden"
+      >
+        <motion.div
+          initial={{ width: "0%" }}
+          animate={{ width: "100%" }}
+          transition={{ delay: 1, duration: 1.6, ease: "easeInOut" }}
+          className="h-full bg-gradient-to-r from-amber-500 to-yellow-400 rounded-full"
+        />
+      </motion.div>
+    </div>
+  );
+}
 
 function MainAppContent() {
   const [activeTab, setActiveTab] = useState<string>("home");
   const { language, isAdminMode, setIsAdminMode, currentUser, isLoading, settings } = useApp();
   const t = translations[language];
   const isRtl = language === "ar";
+
+  // Automatically switch to the "mine" tab if there's an invite parameter in the URL
+  React.useEffect(() => {
+    const fullUrl = window.location.href;
+    const hasInvite = /[?&]invite=([^&#/]+)/.test(fullUrl);
+    if (hasInvite && !currentUser) {
+      setActiveTab("mine");
+    }
+  }, [currentUser]);
 
   // Navigation tab definitions
   const tabs = [
@@ -119,9 +190,22 @@ function MainAppContent() {
 }
 
 export default function App() {
+  const [showSplash, setShowSplash] = useState(true);
+
   return (
     <AppProvider>
-      <MainAppContent />
+      <AnimatePresence>
+        {showSplash && (
+          <motion.div
+            key="splash"
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <SplashScreen onDone={() => setShowSplash(false)} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+      {!showSplash && <MainAppContent />}
     </AppProvider>
   );
 }
