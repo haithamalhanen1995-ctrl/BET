@@ -81,6 +81,7 @@ export const AdminView: React.FC = () => {
   const [manualWithdrawAmount, setManualWithdrawAmount] = useState("");
   const [manualWithdrawAddress, setManualWithdrawAddress] = useState("");
   const [manualWithdrawDate, setManualWithdrawDate] = useState("");
+  const [manualWithdrawTime, setManualWithdrawTime] = useState("");
   const [manualWithdrawStatus, setManualWithdrawStatus] = useState<"approved" | "pending" | "rejected">("approved");
 
   // Products/Tasks states
@@ -796,6 +797,7 @@ export const AdminView: React.FC = () => {
                               setManualWithdrawAddress(user.withdrawalAddress || "");
                               setManualWithdrawAmount("");
                               setManualWithdrawDate(new Date().toISOString().slice(0, 10));
+                              setManualWithdrawTime(new Date().toTimeString().slice(0, 5));
                               setManualWithdrawStatus("approved");
                             }}
                             className="px-2 py-1.5 rounded-xl text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20"
@@ -1435,6 +1437,17 @@ export const AdminView: React.FC = () => {
                 />
               </div>
               <div>
+  <label className="text-[10px] text-slate-400 font-bold block mb-1 text-right">
+    {language === "ar" ? "الوقت" : "Time"}
+  </label>
+  <input
+    type="time"
+    value={manualWithdrawTime}
+    onChange={e => setManualWithdrawTime(e.target.value)}
+    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white text-right"
+  />
+</div>
+              <div>
                 <label className="text-[10px] text-slate-400 font-bold block mb-1 text-right">
                   {language === "ar" ? "الحالة" : "Status"}
                 </label>
@@ -1459,7 +1472,7 @@ export const AdminView: React.FC = () => {
                     alert(language === "ar" ? "يرجى إدخال مبلغ صحيح!" : "Please enter a valid amount!");
                     return;
                   }
-                  const createdAt = manualWithdrawDate ? new Date(manualWithdrawDate).toISOString() : new Date().toISOString();
+                  const createdAt = manualWithdrawDate ? new Date(`${manualWithdrawDate}T${manualWithdrawTime || "00:00"}:00`).toISOString() : new Date().toISOString();
                   adminAddManualWithdrawal(user.id, user.username, user.phone, amount, manualWithdrawAddress, manualWithdrawStatus, createdAt).then(() => {
                     setManualWithdrawUserId(null);
                     setManualWithdrawAmount("");
