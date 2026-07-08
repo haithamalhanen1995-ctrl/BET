@@ -505,11 +505,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Save to Firestore
     await setDoc(doc(db, "users", newUser.id), newUser);
 
-    // Reward the inviter with $5.00
-    await updateDoc(doc(db, "users", inviter.id), {
-      balance: parseFloat((inviter.balance + 5.00).toFixed(2))
-    });
-
+    
     localStorage.setItem("apex_logged_in_user_id", newUser.id);
     setCurrentUser(newUser);
 
