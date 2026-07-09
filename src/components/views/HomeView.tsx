@@ -8,31 +8,6 @@ import { motion, AnimatePresence } from "motion/react";
 interface HomeViewProps {
   onNavigate: (tab: string) => void;
 }
-
-{/* Download App Banner (زر تحميل التطبيق) */}
-<div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-600 to-teal-700 p-5 md:p-6 border border-emerald-200/20 shadow-lg shadow-emerald-100/40 text-white">
-  <div className="absolute bottom-0 left-0 w-40 h-40 bg-white/10 rounded-full blur-3xl pointer-events-none"></div>
-  <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-4">
-    <div className="space-y-1 text-center sm:text-right">
-      <h3 className="text-base md:text-lg font-extrabold flex items-center justify-center sm:justify-start gap-2">
-        <ShoppingBag className="w-5 h-5" />
-        {lang === 'ar' ? 'حمّل تطبيقنا الآن' : 'Download Our App'}
-      </h3>
-      <p className="text-emerald-50 text-xs md:text-sm">
-        {lang === 'ar'
-          ? 'اطلب خدماتك من تطبيق الجوال (Android).'
-          : 'Order services and top-up your games directly from our Android app.'}
-      </p>
-    </div>
-    <a
-      href="/downloads/bet.apk"
-      download="bet.apk"
-      className="inline-flex items-center gap-2 bg-white text-emerald-700 font-extrabold text-sm px-6 py-3 rounded-2xl shadow-md hover:bg-emerald-50 transition-all shrink-0"
-    >
-      ⬇ {lang === 'ar' ? 'تحميل APK' : 'Download APK'}
-    </a>
-  </div>
-</div>
 export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
   const { language, currentUser, settings, getTeamReport, vipTiers } = useApp();
   const t = translations[language];
