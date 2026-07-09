@@ -174,33 +174,14 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
               className={`w-1.5 h-1.5 rounded-full transition-all ${currentSlide === idx ? "w-4 bg-white" : "bg-white/45"}`}
             ></button>
           ))}
-        </div>
-      </div>
-         {/* Download App Banner (زر تحميل التطبيق) */}
-<div clas{/* Download App Banner (زر تحميل التطبيق) */}
-<div className="mt-4 relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-600 to-teal-700 p-5 md:p-6 border border-emerald-200/20 shadow-lg shadow-emerald-100/40 text-white">
-  <div className="absolute bottom-0 left-0 w-40 h-40 bg-white/10 rounded-full blur-3xl pointer-events-none"></div>
-  <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-4">
-    <div className="space-y-1 text-center sm:text-right">
-      <h3 className="text-base md:text-lg font-extrabold flex items-center justify-center sm:justify-start gap-2">
-        <ShoppingBag className="w-5 h-5" />
-        {language === 'ar' ? 'حمّل تطبيقنا الآن' : 'Download Our App'}
-      </h3>
-      <p className="text-emerald-50 text-xs md:text-sm">
-        {language === 'ar'
-          ? 'اطلب خدماتك واشحن ألعابك مباشرة من تطبيق الجوال (Android).'
-          : 'Order services and top-up your games directly from our Android app.'}
-      </p>
-    </div>
-    <a
-      href="/downloads/BET.apk"
-      download="BET.apk"
-      className="inline-flex items-center gap-2 bg-white text-emerald-700 font-extrabold text-sm px-6 py-3 rounded-2xl shadow-md hover:bg-emerald-50 transition-all shrink-0"
-    >
-      ⬇ {language === 'ar' ? 'تحميل APK' : 'Download APK'}
-    </a>
-  </div>
-</div>
+       <a 
+  href="/downloads/BET.apk" 
+  download="BET.apk"
+  className="bg-teal-500 text-white font-bold py-3 px-6 rounded-lg inline-flex items-center justify-center w-full my-4"
+>
+  ⬇ {language === 'ar' ? 'تحميل التطبيق (APK)' : 'Download App (APK)'}
+</a>
+
 
       {/* Announcement Marquee */}
       <div className="bg-slate-900 border border-amber-500/30 rounded-xl px-3 py-2 flex items-center gap-2.5 overflow-hidden shadow-md shadow-amber-500/5">
