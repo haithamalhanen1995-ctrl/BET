@@ -176,7 +176,30 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
           ))}
         </div>
       </div>
-
+         {/* Download App Banner (زر تحميل التطبيق) */}
+<div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-600 to-teal-700 p-5 md:p-6 border border-emerald-200/20 shadow-lg shadow-emerald-100/40 text-white">
+  <div className="absolute bottom-0 left-0 w-40 h-40 bg-white/10 rounded-full blur-3xl pointer-events-none"></div>
+  <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-4">
+    <div className="space-y-1 text-center sm:text-right">
+      <h3 className="text-base md:text-lg font-extrabold flex items-center justify-center sm:justify-start gap-2">
+        <ShoppingBag className="w-5 h-5" />
+        {lang === 'ar' ? 'حمّل تطبيقنا الآن' : 'Download Our App'}
+      </h3>
+      <p className="text-emerald-50 text-xs md:text-sm">
+        {lang === 'ar'
+          ? 'اطلب خدماتك واشحن ألعابك مباشرة من تطبيق الجوال (Android).'
+          : 'Order services and top-up your games directly from our Android app.'}
+      </p>
+    </div>
+    <a
+      href="/downloads/BET.apk"
+      download="BET.apk"
+      className="inline-flex items-center gap-2 bg-white text-emerald-700 font-extrabold text-sm px-6 py-3 rounded-2xl shadow-md hover:bg-emerald-50 transition-all shrink-0"
+    >
+      ⬇ {lang === 'ar' ? 'تحميل APK' : 'Download APK'}
+    </a>
+  </div>
+</div>
       {/* Announcement Marquee */}
       <div className="bg-slate-900 border border-amber-500/30 rounded-xl px-3 py-2 flex items-center gap-2.5 overflow-hidden shadow-md shadow-amber-500/5">
         <div className="flex items-center gap-1.5 flex-shrink-0 bg-amber-500/15 border border-amber-500/30 px-2.5 py-1 rounded-lg text-amber-400 font-black text-[10px] tracking-wider">
