@@ -34,19 +34,13 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
   // Home banners sliding
   const banners = [
     {
-      titleAr: "مكافأة ترحيبية مجانية بقيمة 1$",
+      titleAr: "اعلان مهم",
       titleEn: "Free $1 Registration Reward",
-      descAr: "اعلان مهم:احصل على راتب إضافي كل 10 أيام أطلقنا نظام الرواتب الجديد للأعضاء النشطين كلما زاد عدد إحالاتك المباشرة ارتفع مستوى راتبك واستفدت من مزايا إضافية وفرص أكبر للنمو" ,
+      descAr: " احصل على راتب إضافي كل 10 أيام أطلقنا نظام الرواتب الجديد للأعضاء النشطين كلما زاد عدد إحالاتك المباشرة ارتفع مستوى راتبك واستفدت من مزايا إضافية وفرص أكبر للنمو" ,
       descEn: "Register now and get instant free balance to start VIP0 tasks!",
       gradient: "from-amber-500 to-yellow-600"
     },
-    {
-      titleAr: "عمولات الفريق تصل إلى 17%",
-      titleEn: "Team Commissions up to 17%",
-      descAr: "ادعُ أصدقاءك واكسب عمولات تراكمية للمستويات الأول والثاني والثالث.",
-      descEn: "Invite friends and earn recurring multi-level team commissions.",
-      gradient: "from-blue-600 to-indigo-700"
-    }
+    
   ];
 
   useEffect(() => {
