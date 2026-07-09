@@ -177,7 +177,15 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
           ))}
         </div>
       </div>
-
+      {/* Download App Button */}
+      <a 
+        href="/downloads/BET.apk" 
+        download="BET.apk"
+        className="bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-6 rounded-xl flex items-center justify-center w-full my-4 shadow-lg transition-all"
+      >
+        <span className="mr-2">⬇</span>
+        {language === 'ar' ? 'تحميل التطبيق (APK)' : 'Download App (APK)'}
+      </a>
       {/* Announcement Marquee */}
       <div className="bg-slate-900 border border-amber-500/30 rounded-xl px-3 py-2 flex items-center gap-2.5 overflow-hidden shadow-md shadow-amber-500/5">
         <div className="flex items-center gap-1.5 flex-shrink-0 bg-amber-500/15 border border-amber-500/30 px-2.5 py-1 rounded-lg text-amber-400 font-black text-[10px] tracking-wider">
