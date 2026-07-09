@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+Import React, { useState, useEffect } from "react";
 import { useApp } from "../../context/AppContext";
 import { translations } from "../../data/translations";
 import { MOCK_NOTIFICATIONS } from "../../data/mockData";
@@ -174,9 +174,8 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
               className={`w-1.5 h-1.5 rounded-full transition-all ${currentSlide === idx ? "w-4 bg-white" : "bg-white/45"}`}
             ></button>
           ))}
-
-          
-  
+        </div>
+      </div>
 
       {/* Announcement Marquee */}
       <div className="bg-slate-900 border border-amber-500/30 rounded-xl px-3 py-2 flex items-center gap-2.5 overflow-hidden shadow-md shadow-amber-500/5">
