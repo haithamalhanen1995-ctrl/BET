@@ -174,28 +174,9 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
               className={`w-1.5 h-1.5 rounded-full transition-all ${currentSlide === idx ? "w-4 bg-white" : "bg-white/45"}`}
             ></button>
           ))}
-                 {banners.map((_, idx) => (
-            <button
-              key={idx}
-              onClick={() => setCurrentSlide(idx)}
-              className={`w-1.5 h-1.5 rounded-full transition-all ${currentSlide === idx ? "w-4 bg-white" : "bg-white/45"}`}
-            ></button>
-          ))}
-        </div> {/* <-- إغلاق div نقاط التنقل */}
-      </div> {/* <-- إغلاق div البانر الرئيسي */}
 
-      {/* زر التحميل يكون هنا خارج الـ div الخاص بالبانر */}
-      <a 
-        href="/downloads/BET.apk" 
-        download="BET.apk"
-        className="bg-teal-500 text-white font-bold py-3 px-6 rounded-lg inline-flex items-center justify-center w-full my-4"
-      >
-        ⬇ {language === 'ar' ? 'تحميل التطبيق (APK)' : 'Download App (APK)'}
-      </a>
-
-      {/* Announcement Marquee */}
-      <div className="bg-slate-900 border border-amber-500/30 ...">
-
+          
+  
 
       {/* Announcement Marquee */}
       <div className="bg-slate-900 border border-amber-500/30 rounded-xl px-3 py-2 flex items-center gap-2.5 overflow-hidden shadow-md shadow-amber-500/5">
