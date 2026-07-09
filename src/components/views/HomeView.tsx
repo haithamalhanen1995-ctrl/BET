@@ -1,4 +1,4 @@
-Import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useApp } from "../../context/AppContext";
 import { translations } from "../../data/translations";
 import { MOCK_NOTIFICATIONS } from "../../data/mockData";
@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from "motion/react";
 interface HomeViewProps {
   onNavigate: (tab: string) => void;
 }
+
 export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
   const { language, currentUser, settings, getTeamReport, vipTiers } = useApp();
   const t = translations[language];
