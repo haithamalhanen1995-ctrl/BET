@@ -36,7 +36,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
     {
       titleAr: "مكافأة ترحيبية مجانية بقيمة 1$",
       titleEn: "Free $1 Registration Reward",
-      descAr: "سجل حسابك الآن واحصل على رصيد مجاني لبدء مهام VIP0 فوراً!",
+      descAr: "اعلان مهم:احصل على راتب إضافي كل 10 أيام أطلقنا نظام الرواتب الجديد للأعضاء النشطين كلما زاد عدد إحالاتك المباشرة ارتفع مستوى راتبك واستفدت من مزايا إضافية وفرص أكبر للنمو" ,
       descEn: "Register now and get instant free balance to start VIP0 tasks!",
       gradient: "from-amber-500 to-yellow-600"
     },
@@ -195,7 +195,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
         <div className="flex-1 overflow-hidden relative h-5 flex items-center">
           <div className="absolute whitespace-nowrap text-xs text-amber-200 font-bold animate-marquee-ltr">
             {language === "ar" 
-              ? "اعلان مهم:احصل على راتب إضافي كل 10 أيام أطلقنا نظام الرواتب الجديد للأعضاء النشطين كلما زاد عدد إحالاتك المباشرة ارتفع مستوى راتبك واستفدت من مزايا إضافية وفرص أكبر للنمو" 
+              ? "اعلان مهم : لايوجد عطلة في العمل والسحب كل 24 ساعه يصلك خلال نصف ساعة او ساعة لااكثر"
               : "Important Announcement: Starting next week, Friday and Saturday will be weekend holidays"}
           </div>
         </div>
