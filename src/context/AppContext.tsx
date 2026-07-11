@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { User, AppSettings, DepositRequest, WithdrawRequest, Language, TeamReport, VipTier, Product } from "../types";
+import { User, AppSettings, DepositRequest, WithdrawRequest, Language, TeamReport, VipTier, Product, SupportChat, SupportMessage } from "../types";
 import { INITIAL_VIP_TIERS, PRODUCTS } from "../data/mockData";
 import { collection, onSnapshot, doc, setDoc, getDocs, updateDoc, deleteDoc } from "firebase/firestore";
 import { db } from "../lib/firebase";
@@ -45,6 +45,19 @@ interface AppContextType {
   adminUpdateSettings: (fields: Partial<AppSettings>) => Promise<void>;
   getTeamReport: (userId: string) => TeamReport;
   isLoading: boolean;
+
+  // Technical Support
+  supportChats: SupportChat[];
+  activeSupportMessages: SupportMessage[];
+  unreadSupportCountAdmin: number;
+  unreadSupportCountUser: number;
+  sendSupportMessage: (text: string) => Promise<{ success: boolean; error?: string }>;
+  adminSendSupportMessage: (userId: string, text: string) => Promise<void>;
+  closeSupportChat: (userId: string) => Promise<void>;
+  clearUserUnreadSupport: () => Promise<void>;
+  clearAdminUnreadSupport: (userId: string) => Promise<void>;
+  isSupportOpen: boolean;
+  setIsSupportOpen: (open: boolean) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -149,6 +162,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [products, setProducts] = useState<Product[]>(PRODUCTS);
   const [isAdminMode, setIsAdminMode] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  // Technical Support states
+  const [supportChats, setSupportChats] = useState<SupportChat[]>([]);
+  const [activeSupportMessages, setActiveSupportMessages] = useState<SupportMessage[]>([]);
+  const [unreadSupportCountAdmin, setUnreadSupportCountAdmin] = useState<number>(0);
+  const [unreadSupportCountUser, setUnreadSupportCountUser] = useState<number>(0);
+  const [isSupportOpen, setIsSupportOpen] = useState<boolean>(false);
 
   // Sync language selection locally
   useEffect(() => {
@@ -296,6 +316,82 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       unsubscribes.forEach((unsub) => unsub());
     };
   }, []);
+
+  // Realtime Technical Support Sync
+  useEffect(() => {
+    let unsubscribes: (() => void)[] = [];
+
+    if (!currentUser) {
+      setSupportChats([]);
+      setActiveSupportMessages([]);
+      setUnreadSupportCountAdmin(0);
+      setUnreadSupportCountUser(0);
+      return;
+    }
+
+    // 1. If admin, listen to ALL support chats
+    if (currentUser.isAdmin) {
+      const unsubAllChats = onSnapshot(
+        collection(db, "supportChats"),
+        (snapshot) => {
+          const chats: SupportChat[] = [];
+          let unreadAdminTotal = 0;
+          snapshot.forEach((doc) => {
+            const data = doc.data() as SupportChat;
+            chats.push(data);
+            if (data.status === "open") {
+              unreadAdminTotal += data.unreadCountAdmin || 0;
+            }
+          });
+          chats.sort((a, b) => new Date(b.updatedAt || b.lastMessageTime).getTime() - new Date(a.updatedAt || a.lastMessageTime).getTime());
+          setSupportChats(chats);
+          setUnreadSupportCountAdmin(unreadAdminTotal);
+        },
+        (error) => {
+          console.error("Firestore supportChats sync error:", error);
+        }
+      );
+      unsubscribes.push(unsubAllChats);
+    }
+
+    // 2. Always listen to the current user's own chat messages
+    const unsubMessages = onSnapshot(
+      collection(db, "supportChats", currentUser.id, "messages"),
+      (snapshot) => {
+        const msgs: SupportMessage[] = [];
+        snapshot.forEach((doc) => {
+          msgs.push(doc.data() as SupportMessage);
+        });
+        msgs.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+        setActiveSupportMessages(msgs);
+      },
+      (error) => {
+        console.error("Firestore support messages sync error:", error);
+      }
+    );
+    unsubscribes.push(unsubMessages);
+
+    // 3. Always listen to the current user's own chat status/unread count
+    const unsubMyChat = onSnapshot(
+      doc(db, "supportChats", currentUser.id),
+      (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data() as SupportChat;
+          setUnreadSupportCountUser(data.unreadCountUser || 0);
+        } else {
+          setUnreadSupportCountUser(0);
+        }
+      },
+      (error) => {
+        console.error("Firestore current user support chat sync error:", error);
+      }
+    );
+    unsubscribes.push(unsubMyChat);
+
+    return () => {
+      unsubscribes.forEach((unsub) => unsub());
+    };
+  }, [currentUser]);
 
   const seedDatabaseIfEmpty = async () => {
     // 1. Seed VIP Tiers
@@ -823,6 +919,114 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   };
 
+  // Support Actions
+  const sendSupportMessage = async (text: string) => {
+    if (!currentUser) return { success: false, error: "Not logged in" };
+    const textTrim = text.trim();
+    if (!textTrim) return { success: false, error: "Empty message" };
+
+    try {
+      const msgId = "msg_" + Date.now();
+      const msg: SupportMessage = {
+        id: msgId,
+        senderId: currentUser.id,
+        senderName: currentUser.username,
+        text: textTrim,
+        createdAt: new Date().toISOString(),
+        isAdmin: false
+      };
+
+      const existingChat = supportChats.find(c => c.id === currentUser.id);
+      const unreadAdminCount = (existingChat?.unreadCountAdmin || 0) + 1;
+
+      const chatUpdate: SupportChat = {
+        id: currentUser.id,
+        userId: currentUser.id,
+        username: currentUser.username,
+        phone: currentUser.phone || "",
+        lastMessageText: textTrim,
+        lastMessageTime: new Date().toISOString(),
+        unreadCountAdmin: unreadAdminCount,
+        unreadCountUser: 0,
+        updatedAt: new Date().toISOString(),
+        status: "open"
+      };
+
+      await setDoc(doc(db, "supportChats", currentUser.id), chatUpdate, { merge: true });
+      await setDoc(doc(db, "supportChats", currentUser.id, "messages", msgId), msg);
+
+      return { success: true };
+    } catch (err: any) {
+      console.error("Failed to send support message:", err);
+      return { success: false, error: err.message };
+    }
+  };
+
+  const adminSendSupportMessage = async (userId: string, text: string) => {
+    const textTrim = text.trim();
+    if (!textTrim) return;
+
+    try {
+      const msgId = "msg_" + Date.now();
+      const msg: SupportMessage = {
+        id: msgId,
+        senderId: "admin",
+        senderName: "Admin",
+        text: textTrim,
+        createdAt: new Date().toISOString(),
+        isAdmin: true
+      };
+
+      const existingChat = supportChats.find(c => c.id === userId);
+      const unreadUserCount = (existingChat?.unreadCountUser || 0) + 1;
+
+      const chatUpdate = {
+        lastMessageText: textTrim,
+        lastMessageTime: new Date().toISOString(),
+        unreadCountUser: unreadUserCount,
+        unreadCountAdmin: 0,
+        updatedAt: new Date().toISOString(),
+        status: "open" as const
+      };
+
+      await setDoc(doc(db, "supportChats", userId), chatUpdate, { merge: true });
+      await setDoc(doc(db, "supportChats", userId, "messages", msgId), msg);
+    } catch (err) {
+      console.error("Failed admin support reply:", err);
+    }
+  };
+
+  const closeSupportChat = async (userId: string) => {
+    try {
+      await updateDoc(doc(db, "supportChats", userId), {
+        status: "closed"
+      });
+    } catch (err) {
+      console.error("Failed to close support chat:", err);
+    }
+  };
+
+  const clearUserUnreadSupport = async () => {
+    if (!currentUser) return;
+    try {
+      await updateDoc(doc(db, "supportChats", currentUser.id), {
+        unreadCountUser: 0
+      });
+    } catch (err) {
+      console.error("Failed to clear user support unread:", err);
+    }
+  };
+
+  const clearAdminUnreadSupport = async (userId: string) => {
+    try {
+      await updateDoc(doc(db, "supportChats", userId), {
+        unreadCountAdmin: 0
+      });
+    } catch (err) {
+      console.error("Failed to clear admin support unread:", err);
+    }
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -861,7 +1065,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         adminAddManualWithdrawal,
         adminUpdateSettings,
         getTeamReport,
-        isLoading
+        isLoading,
+        
+        // Support exports
+        supportChats,
+        activeSupportMessages,
+        unreadSupportCountAdmin,
+        unreadSupportCountUser,
+        sendSupportMessage,
+        adminSendSupportMessage,
+        closeSupportChat,
+        clearUserUnreadSupport,
+        clearAdminUnreadSupport,
+        isSupportOpen,
+        setIsSupportOpen
       }}
     >
       {children}
