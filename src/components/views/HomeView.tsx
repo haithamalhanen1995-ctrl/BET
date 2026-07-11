@@ -73,13 +73,6 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
           </h1>
           <p className="text-[10px] text-slate-400">{t.welcomeBack} {currentUser ? currentUser.username : "Guest"}</p>
         </div>
-        <button 
-          onClick={() => window.open(settings.supportTelegram, "_blank")}
-          className="flex items-center gap-1 text-xs bg-slate-850 hover:bg-slate-800 text-amber-400 px-2.5 py-1 rounded-full border border-amber-500/20 shadow-lg transition-all"
-        >
-          <HelpCircle className="w-3.5 h-3.5" />
-          <span>{t.customerService}</span>
-        </button>
       </div>
 
       {/* Balance Card */}
@@ -316,25 +309,6 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
           <span className="text-xs font-black text-slate-300">Shopify</span>
           <span className="text-xs font-black text-slate-300">Sephora</span>
         </div>
-      </div>
-
-      {/* SUPPORT WIDGET */}
-      <div className="bg-gradient-to-r from-slate-900 to-slate-950 rounded-xl p-4 border border-slate-800 flex justify-between items-center shadow-lg">
-        <div className="max-w-[60%]">
-          <h4 className="text-xs font-bold text-white mb-0.5">
-            {language === "ar" ? "رابط إدارة منصة BET" : "BET Platform Support"}
-          </h4>
-          <p className="text-[9px] text-slate-400 leading-normal">
-            {language === "ar" ? "تواصل مباشرة مع إدارة المنصة للاستفسارات والدعم الفني" : "Contact the platform administration directly for inquiries and support"}
-          </p>
-        </div>
-        <button
-          onClick={() => window.open(settings.supportTelegram, "_blank")}
-          className="bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-slate-950 font-black text-[10px] px-4 py-2 rounded-xl transition-all shadow-md cursor-pointer flex items-center gap-1.5"
-        >
-          <MessageCircle className="w-3.5 h-3.5" />
-          <span>{language === "ar" ? "تواصل الآن" : "Contact Now"}</span>
-        </button>
       </div>
 
     </div>

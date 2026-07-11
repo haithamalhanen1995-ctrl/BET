@@ -1,8 +1,11 @@
 import React, { useState } from "react";
 import { useApp } from "../../context/AppContext";
 import { translations } from "../../data/translations";
-import { ShieldAlert, Users, Landmark, AlertCircle, Settings, ClipboardCheck, ArrowUpRight, ArrowDownLeft, Trash2, Check, X, Search, Coins, Award, Plus, Edit2 } from "lucide-react";
+import { ShieldAlert, Users, Landmark, AlertCircle, Settings, ClipboardCheck, ArrowUpRight, ArrowDownLeft, Trash2, Check, X, Search, Coins, Award, Plus, Edit2, MessageSquare, Headphones, Send } from "lucide-react";
 import { motion } from "motion/react";
+import { collection, onSnapshot } from "firebase/firestore";
+import { db } from "../../lib/firebase";
+import { SupportMessage } from "../../types";
 
 export const AdminView: React.FC = () => {
   const {
@@ -27,14 +30,21 @@ export const AdminView: React.FC = () => {
     adminAddProduct,
     adminUpdateProduct,
     adminDeleteProduct,
-    adminAddManualWithdrawal
+    adminAddManualWithdrawal,
+    
+    // Support Context items
+    supportChats,
+    unreadSupportCountAdmin,
+    adminSendSupportMessage,
+    closeSupportChat,
+    clearAdminUnreadSupport
   } = useApp();
 
   const t = translations[language];
   const isRtl = language === "ar";
 
   // Navigation sub-tabs
-  const [activeSubTab, setActiveSubTab] = useState<"deposits" | "withdrawals" | "users" | "viptiers" | "tasks" | "settings">("deposits");
+  const [activeSubTab, setActiveSubTab] = useState<"deposits" | "withdrawals" | "users" | "viptiers" | "tasks" | "settings" | "support">("deposits");
 
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
 
@@ -92,6 +102,64 @@ export const AdminView: React.FC = () => {
   const [productCommissionInput, setProductCommissionInput] = useState("");
   const [productImageInput, setProductImageInput] = useState("");
   const [productDeleteConfirmId, setProductDeleteConfirmId] = useState<string | null>(null);
+
+  // Technical Support admin states
+  const [selectedChatUserId, setSelectedChatUserId] = useState<string | null>(null);
+  const [adminReplyText, setAdminReplyText] = useState("");
+  const [isSendingReply, setIsSendingReply] = useState(false);
+  const adminMessagesEndRef = React.useRef<HTMLDivElement | null>(null);
+
+  // Local real-time listener for the selected user's support chat messages
+  const [localMessages, setLocalMessages] = useState<SupportMessage[]>([]);
+
+  React.useEffect(() => {
+    if (!selectedChatUserId) {
+      setLocalMessages([]);
+      return;
+    }
+
+    const unsub = onSnapshot(
+      collection(db, "supportChats", selectedChatUserId, "messages"),
+      (snapshot) => {
+        const msgs: SupportMessage[] = [];
+        snapshot.forEach((doc) => {
+          msgs.push(doc.data() as SupportMessage);
+        });
+        msgs.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+        setLocalMessages(msgs);
+      },
+      (error) => {
+        console.error("Error syncing selected support chat messages:", error);
+      }
+    );
+
+    return () => unsub();
+  }, [selectedChatUserId]);
+
+  // Clear admin unread
+  React.useEffect(() => {
+    if (selectedChatUserId) {
+      clearAdminUnreadSupport(selectedChatUserId);
+    }
+  }, [selectedChatUserId, supportChats]);
+
+  // Listen to open-admin-support event to switch sub-tab when clicking top bell
+  React.useEffect(() => {
+    const handleOpenAdminSupport = () => {
+      setActiveSubTab("support");
+    };
+    window.addEventListener("open-admin-support", handleOpenAdminSupport);
+    return () => window.removeEventListener("open-admin-support", handleOpenAdminSupport);
+  }, []);
+
+  // Scroll support chat
+  React.useEffect(() => {
+    if (adminMessagesEndRef.current) {
+      setTimeout(() => {
+        adminMessagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 50);
+    }
+  }, [localMessages]);
 
   // Pending totals
   const pendingDeposits = depositRequests.filter(d => d.status === "pending");
@@ -355,6 +423,25 @@ export const AdminView: React.FC = () => {
           }`}
         >
           {language === "ar" ? "إعدادات" : "Settings"}
+        </button>
+        <button
+          onClick={() => {
+            setSelectedChatUserId(null);
+            setAdminReplyText("");
+            setActiveSubTab("support");
+          }}
+          className={`py-2 text-center rounded-xl transition-all relative ${
+            activeSubTab === "support" ? "bg-amber-500 text-slate-950 font-black shadow-sm" : "text-slate-400 hover:text-white"
+          }`}
+        >
+          <div className="flex items-center justify-center gap-1">
+            <span>{language === "ar" ? "الدعم" : "Support"}</span>
+            {unreadSupportCountAdmin > 0 && (
+              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[8px] font-black text-white font-mono animate-pulse">
+                {unreadSupportCountAdmin}
+              </span>
+            )}
+          </div>
         </button>
       </div>
 
@@ -1386,6 +1473,223 @@ export const AdminView: React.FC = () => {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* TECHNICAL SUPPORT CHATS MANAGER */}
+        {activeSubTab === "support" && (
+          <div className="flex flex-col gap-4">
+            <div className="flex justify-between items-center border-b border-slate-850 pb-2">
+              <h4 className="text-xs font-black text-amber-500 uppercase tracking-wider">
+                {language === "ar" ? "لوحة إدارة الدعم الفني المباشر" : "Customer Support Console"}
+              </h4>
+              {unreadSupportCountAdmin > 0 && (
+                <span className="bg-red-500/10 border border-red-500/20 text-red-400 font-bold px-2.5 py-0.5 rounded-full text-[10px] animate-pulse">
+                  {unreadSupportCountAdmin} {language === "ar" ? "محادثات غير مقروءة" : "Unread Thread(s)"}
+                </span>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[60vh] min-h-[400px]">
+              {/* Left Column: Chats List */}
+              <div className="bg-slate-950 border border-slate-850 rounded-2xl flex flex-col overflow-hidden h-full">
+                <div className="p-3 bg-slate-900 border-b border-slate-850 flex items-center justify-between">
+                  <span className="text-[10px] text-slate-400 font-black uppercase">
+                    {language === "ar" ? "قائمة المحادثات النشطة" : "Active Conversations"}
+                  </span>
+                  <span className="text-[9px] bg-slate-800 text-slate-300 font-mono font-bold px-1.5 py-0.5 rounded">
+                    {supportChats.length}
+                  </span>
+                </div>
+
+                <div className="flex-1 overflow-y-auto divide-y divide-slate-900/60 p-1 space-y-1">
+                  {supportChats.length === 0 ? (
+                    <div className="text-center py-12 text-slate-600 italic text-[11px] flex flex-col items-center justify-center gap-2">
+                      <div className="text-xl">📭</div>
+                      <p>{language === "ar" ? "لا توجد أي محادثات دعم نشطة حالياً" : "No active support chats found."}</p>
+                    </div>
+                  ) : (
+                    supportChats.map((chat) => {
+                      const isSelected = selectedChatUserId === chat.id;
+                      const hasUnreads = (chat.unreadCountAdmin || 0) > 0 && chat.status === "open";
+                      return (
+                        <button
+                          key={chat.id}
+                          onClick={() => setSelectedChatUserId(chat.id)}
+                          className={`w-full text-right p-3 rounded-xl flex items-center gap-3 transition-all cursor-pointer ${
+                            isSelected
+                              ? "bg-amber-500/10 border border-amber-500/30 text-white font-black"
+                              : "hover:bg-slate-900/60 border border-transparent text-slate-300"
+                          }`}
+                        >
+                          {/* User Avatar Initials */}
+                          <div className="relative flex-shrink-0">
+                            <div className="w-9 h-9 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-amber-500 font-black uppercase text-xs">
+                              {chat.username[0] || "U"}
+                            </div>
+                            {chat.status === "open" && (
+                              <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-slate-950"></span>
+                            )}
+                          </div>
+
+                          {/* Chat Text Details */}
+                          <div className="flex-1 min-w-0 text-right">
+                            <div className="flex items-center justify-between gap-1.5">
+                              <span className="text-xs font-black truncate">{chat.username}</span>
+                              <span className="text-[8px] text-slate-500 font-mono">
+                                {chat.lastMessageTime
+                                  ? new Date(chat.lastMessageTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                                  : ""}
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-slate-400 truncate mt-0.5">{chat.phone}</p>
+                            <p className={`text-[10px] truncate mt-0.5 ${hasUnreads ? "text-amber-400 font-black" : "text-slate-500"}`}>
+                              {chat.lastMessageText || "..."}
+                            </p>
+                          </div>
+
+                          {/* Unread Admin Badge */}
+                          {hasUnreads && (
+                            <span className="flex-shrink-0 h-4 w-4 bg-red-500 text-[8px] font-black text-white rounded-full flex items-center justify-center font-mono">
+                              {chat.unreadCountAdmin}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+
+              {/* Right Columns: Active Chat Thread View */}
+              <div className="md:col-span-2 bg-slate-950 border border-slate-850 rounded-2xl flex flex-col overflow-hidden h-full">
+                {!selectedChatUserId ? (
+                  <div className="flex-1 flex flex-col items-center justify-center text-center p-6 my-auto">
+                    <div className="w-16 h-16 rounded-full bg-amber-500/5 border border-amber-500/10 flex items-center justify-center text-3xl mb-3">
+                      🎧
+                    </div>
+                    <h5 className="text-xs font-black text-slate-300">
+                      {language === "ar" ? "مكتب مساعدة الدعم المباشر" : "Live Support Desk"}
+                    </h5>
+                    <p className="text-[10px] text-slate-500 leading-normal mt-1 max-w-[240px]">
+                      {language === "ar"
+                        ? "يرجى تحديد محادثة من القائمة الجانبية لعرض رسائل العضو والرد عليه وحل مشكلته في الوقت الفعلي."
+                        : "Select a user chat thread from the left menu to read messages and reply in real-time."}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col h-full justify-between">
+                    {/* Active Thread Header */}
+                    <div className="p-3 bg-slate-900 border-b border-slate-850 flex items-center justify-between flex-shrink-0">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 font-bold uppercase text-xs">
+                          {supportChats.find((c) => c.id === selectedChatUserId)?.username?.[0] || "U"}
+                        </div>
+                        <div className="text-right">
+                          <span className="text-xs font-black text-white leading-none block">
+                            {supportChats.find((c) => c.id === selectedChatUserId)?.username}
+                          </span>
+                          <span className="text-[9px] text-slate-400 font-mono mt-0.5 block">
+                            {supportChats.find((c) => c.id === selectedChatUserId)?.phone}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {supportChats.find((c) => c.id === selectedChatUserId)?.status === "open" ? (
+                          <button
+                            onClick={async () => {
+                              if (confirm(language === "ar" ? "هل أنت متأكد من إنهاء وإغلاق محادثة الدعم هذه؟" : "Are you sure you want to close this support ticket?")) {
+                                await closeSupportChat(selectedChatUserId);
+                              }
+                            }}
+                            className="bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 text-[9px] font-black px-2 py-1 rounded-lg cursor-pointer"
+                          >
+                            {language === "ar" ? "إنهاء المحادثة" : "Close Chat"}
+                          </button>
+                        ) : (
+                          <span className="bg-slate-850 text-slate-400 border border-slate-800 text-[9px] font-black px-2 py-1 rounded-lg select-none">
+                            {language === "ar" ? "تذكرة مغلقة" : "Ticket Closed"}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Messages Body */}
+                    <div className="flex-1 overflow-y-auto p-4 space-y-3 flex flex-col">
+                      {localMessages.length === 0 ? (
+                        <div className="flex-1 flex flex-col items-center justify-center text-center p-4 my-auto">
+                          <p className="text-[10px] text-slate-600 italic">
+                            {language === "ar" ? "لا توجد رسائل سابقة في هذه المحادثة" : "No message history."}
+                          </p>
+                        </div>
+                      ) : (
+                        localMessages.map((m) => {
+                          const isMsgFromMe = m.isAdmin;
+                          return (
+                            <div
+                              key={m.id}
+                              className={`flex flex-col max-w-[80%] ${
+                                isMsgFromMe ? "self-end items-end" : "self-start items-start"
+                              }`}
+                            >
+                              <div
+                                className={`rounded-2xl px-3 py-2 text-xs leading-normal select-text ${
+                                  isMsgFromMe
+                                    ? "bg-gradient-to-r from-amber-500 to-yellow-600 text-slate-950 font-medium rounded-tr-none"
+                                    : "bg-slate-800 text-slate-100 rounded-tl-none"
+                                }`}
+                              >
+                                <p className="whitespace-pre-wrap break-words">{m.text}</p>
+                              </div>
+                              <span className="text-[8px] text-slate-500 font-mono mt-1 px-1">
+                                {m.createdAt ? new Date(m.createdAt).toLocaleString() : ""}
+                              </span>
+                            </div>
+                          );
+                        })
+                      )}
+                      <div ref={adminMessagesEndRef} />
+                    </div>
+
+                    {/* Chat Reply Box */}
+                    <div className="p-3 border-t border-slate-850 flex-shrink-0">
+                      <form
+                        onSubmit={async (e) => {
+                          e.preventDefault();
+                          if (!adminReplyText.trim() || isSendingReply) return;
+                          setIsSendingReply(true);
+                          await adminSendSupportMessage(selectedChatUserId, adminReplyText);
+                          setAdminReplyText("");
+                          setIsSendingReply(false);
+                        }}
+                        className="flex items-center gap-2"
+                      >
+                        <input
+                          type="text"
+                          value={adminReplyText}
+                          onChange={(e) => setAdminReplyText(e.target.value)}
+                          placeholder={language === "ar" ? "اكتب الرد هنا لمساعدة العضو..." : "Type reply to support member..."}
+                          className="flex-1 bg-slate-950 border border-slate-850 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-hidden focus:border-amber-500 font-sans"
+                          disabled={isSendingReply}
+                        />
+                        <button
+                          type="submit"
+                          disabled={isSendingReply || !adminReplyText.trim()}
+                          className="p-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-xl font-bold transition-all disabled:opacity-40 disabled:hover:bg-amber-500 active:scale-95 cursor-pointer flex-shrink-0"
+                        >
+                          {isSendingReply ? (
+                            <div className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></div>
+                          ) : (
+                            <Send className="w-4 h-4" />
+                          )}
+                        </button>
+                      </form>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
