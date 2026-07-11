@@ -1,0 +1,175 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User account document including balance, earnings, VIP tier, and referrers",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "username": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "balance": { "type": "number" },
+        "todayEarnings": { "type": "number" },
+        "totalEarnings": { "type": "number" },
+        "vipLevel": { "type": "integer" },
+        "completedTasksToday": { "type": "integer" },
+        "totalCompletedTasks": { "type": "integer" },
+        "invitationCode": { "type": "string" },
+        "referredBy": { "type": "string" },
+        "password": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "isAdmin": { "type": "boolean" },
+        "withdrawalAddress": { "type": "string" },
+        "withdrawalAddressPolygon": { "type": "string" },
+        "lastTaskResetTime": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "username", "phone", "email", "balance", "vipLevel", "invitationCode", "createdAt"]
+    },
+    "DepositRequest": {
+      "title": "DepositRequest",
+      "description": "Payment submission record for user deposits",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "username": { "type": "string" },
+        "phone": { "type": "string" },
+        "amount": { "type": "number" },
+        "hash": { "type": "string" },
+        "network": { "type": "string" },
+        "screenshot": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "username", "phone", "amount", "hash", "status", "createdAt"]
+    },
+    "WithdrawRequest": {
+      "title": "WithdrawRequest",
+      "description": "Payout request record for user balance withdrawals",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "username": { "type": "string" },
+        "phone": { "type": "string" },
+        "amount": { "type": "number" },
+        "address": { "type": "string" },
+        "network": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "username", "phone", "amount", "address", "status", "createdAt"]
+    },
+    "VipTier": {
+      "title": "VipTier",
+      "description": "VIP platform upgrade level",
+      "type": "object",
+      "properties": {
+        "level": { "type": "integer" },
+        "name": { "type": "string" },
+        "price": { "type": "number" },
+        "dailyTasks": { "type": "integer" },
+        "dailyProfit": { "type": "number" },
+        "singleTaskReward": { "type": "number" },
+        "bgClass": { "type": "string" }
+      },
+      "required": ["level", "name", "price", "dailyTasks", "dailyProfit", "singleTaskReward", "bgClass"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Product rating item for daily tasks simulation",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "price": { "type": "number" },
+        "commission": { "type": "number" },
+        "image": { "type": "string" }
+      },
+      "required": ["id", "name", "price", "commission", "image"]
+    },
+    "AppSettings": {
+      "title": "AppSettings",
+      "description": "Global administration settings for the platform",
+      "type": "object",
+      "properties": {
+        "appName": { "type": "string" },
+        "usdtAddress": { "type": "string" },
+        "usdtAddressPolygon": { "type": "string" },
+        "supportTelegram": { "type": "string" },
+        "supportWhatsApp": { "type": "string" },
+        "minDeposit": { "type": "number" },
+        "minWithdraw": { "type": "number" },
+        "isHolidayEnabled": { "type": "boolean" },
+        "holidayDays": { "type": "array" }
+      }
+    },
+    "SupportChat": {
+      "title": "SupportChat",
+      "description": "Active technical support chat thread representation for a user",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "username": { "type": "string" },
+        "phone": { "type": "string" },
+        "lastMessageText": { "type": "string" },
+        "lastMessageTime": { "type": "string", "format": "date-time" },
+        "unreadCountAdmin": { "type": "integer" },
+        "unreadCountUser": { "type": "integer" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["open", "closed"] }
+      },
+      "required": ["id", "userId", "username", "phone", "lastMessageText", "lastMessageTime", "unreadCountAdmin", "unreadCountUser", "updatedAt", "status"]
+    },
+    "SupportMessage": {
+      "title": "SupportMessage",
+      "description": "Single chat message inside a technical support chat thread",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "text": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "isAdmin": { "type": "boolean" }
+      },
+      "required": ["id", "senderId", "senderName", "text", "createdAt", "isAdmin"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles collection"
+    },
+    "/depositRequests/{depositId}": {
+      "schema": "DepositRequest",
+      "description": "Funding deposit transactions collection"
+    },
+    "/withdrawalRequests/{withdrawalId}": {
+      "schema": "WithdrawRequest",
+      "description": "Funding payout requests collection"
+    },
+    "/vipTiers/{tierLevel}": {
+      "schema": "VipTier",
+      "description": "Platform VIP upgrade configurations"
+    },
+    "/products/{productId}": {
+      "schema": "Product",
+      "description": "Products list collection"
+    },
+    "/settings/global": {
+      "schema": "AppSettings",
+      "description": "Global administration parameters document"
+    },
+    "/supportChats/{userId}": {
+      "schema": "SupportChat",
+      "description": "Customer technical support chats collection"
+    },
+    "/supportChats/{userId}/messages/{messageId}": {
+      "schema": "SupportMessage",
+      "description": "Messages subcollection for a customer technical support chat thread"
+    }
+  }
+}
