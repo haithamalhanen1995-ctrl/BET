@@ -1,6 +1,6 @@
 import React from "react";
 import { useApp } from "../context/AppContext";
-import { Shield, User, Globe, Smartphone, Minimize, Maximize, AlertCircle } from "lucide-react";
+import { Shield, User, Globe, Smartphone, Minimize, Maximize, AlertCircle, Bell } from "lucide-react";
 import { translations } from "../data/translations";
 
 interface PhoneFrameProps {
@@ -10,7 +10,16 @@ interface PhoneFrameProps {
 }
 
 export const PhoneFrame: React.FC<PhoneFrameProps> = ({ children, activeTab, footer }) => {
-  const { language, setLanguage, currentUser, isAdminMode, setIsAdminMode } = useApp();
+  const { 
+    language, 
+    setLanguage, 
+    currentUser, 
+    isAdminMode, 
+    setIsAdminMode,
+    unreadSupportCountAdmin,
+    unreadSupportCountUser,
+    setIsSupportOpen
+  } = useApp();
   const t = translations[language];
   const [isFullscreen, setIsFullscreen] = React.useState(false);
   const [timeStr, setTimeStr] = React.useState("09:41");
@@ -65,6 +74,31 @@ export const PhoneFrame: React.FC<PhoneFrameProps> = ({ children, activeTab, foo
 
           {/* Quick Toolbar */}
           <div className="flex items-center gap-2">
+            {/* Notification Bell */}
+            {currentUser && (
+              <button
+                onClick={() => {
+                  if (currentUser.isAdmin) {
+                    setIsAdminMode(true);
+                    setTimeout(() => {
+                      window.dispatchEvent(new CustomEvent("open-admin-support"));
+                    }, 50);
+                  } else {
+                    setIsSupportOpen(true);
+                  }
+                }}
+                className="relative p-1 rounded bg-slate-850 hover:bg-slate-800 hover:text-white transition-colors cursor-pointer"
+                title={language === "ar" ? "الدعم الفني" : "Tech Support"}
+              >
+                <Bell className="w-3.5 h-3.5 text-amber-500" />
+                {((currentUser.isAdmin ? unreadSupportCountAdmin : unreadSupportCountUser) > 0) && (
+                  <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-red-500 text-[8px] font-black text-white font-mono animate-pulse">
+                    {currentUser.isAdmin ? unreadSupportCountAdmin : unreadSupportCountUser}
+                  </span>
+                )}
+              </button>
+            )}
+
             {/* Language Switcher */}
             <button
               onClick={() => setLanguage(language === "ar" ? "en" : "ar")}
