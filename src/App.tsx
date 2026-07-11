@@ -14,7 +14,7 @@ import { MineView } from "./components/views/MineView";
 import { AdminView } from "./components/views/AdminView";
 import { LoginPrompt } from "./components/LoginPrompt";
 import { translations } from "./data/translations";
-import { Home, PlayCircle, Award, Users, User, ShieldAlert, MessageCircle, Send } from "lucide-react";
+import { Home, PlayCircle, Award, Users, User, ShieldAlert, MessageCircle, Send, Headphones } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
 function SplashScreen({ onDone }: { onDone: () => void }) {
@@ -81,9 +81,37 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
 
 function MainAppContent() {
   const [activeTab, setActiveTab] = useState<string>("home");
-  const { language, isAdminMode, setIsAdminMode, currentUser, isLoading, settings } = useApp();
+  const { 
+    language, 
+    isAdminMode, 
+    setIsAdminMode, 
+    currentUser, 
+    isLoading, 
+    settings,
+    isSupportOpen,
+    setIsSupportOpen,
+    activeSupportMessages,
+    sendSupportMessage,
+    clearUserUnreadSupport
+  } = useApp();
   const t = translations[language];
   const isRtl = language === "ar";
+
+  const [supportInputText, setSupportInputText] = useState("");
+  const [isSendingSupport, setIsSendingSupport] = useState(false);
+  const supportMessagesEndRef = React.useRef<HTMLDivElement | null>(null);
+
+  // Scroll support chat and clear unread when support chat is open
+  React.useEffect(() => {
+    if (isSupportOpen) {
+      clearUserUnreadSupport();
+      if (supportMessagesEndRef.current) {
+        setTimeout(() => {
+          supportMessagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        }, 80);
+      }
+    }
+  }, [isSupportOpen, activeSupportMessages]);
 
   // Automatically switch to the "mine" tab if there's an invite parameter in the URL
   React.useEffect(() => {
@@ -185,6 +213,131 @@ function MainAppContent() {
           </>
         )}
       </div>
+
+      {/* GLOBAL SUPPORT CHAT OVERLAY */}
+      <AnimatePresence>
+        {isSupportOpen && (
+          <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-slate-900 border border-slate-800 rounded-3xl p-5 w-full max-w-sm text-slate-100 shadow-2xl max-h-[85vh] overflow-y-auto flex flex-col"
+            >
+              <div className="flex flex-col h-[65vh] justify-between">
+                {/* Header */}
+                <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-2 flex-shrink-0">
+                  <div className="flex items-center gap-2">
+                    <div className="relative">
+                      <div className="w-8 h-8 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500">
+                        <Headphones className="w-4 h-4" />
+                      </div>
+                      <span className="absolute bottom-0 right-0 block h-2 w-2 rounded-full bg-emerald-500 ring-2 ring-slate-900 animate-pulse"></span>
+                    </div>
+                    <div className="text-left">
+                      <h4 className="text-xs font-black text-white leading-none">
+                        {language === "ar" ? "الدعم الفني المباشر" : "Live Tech Support"}
+                      </h4>
+                      <span className="text-[8px] text-slate-400 font-bold block mt-1">
+                        {language === "ar" ? "متصل - متاح للرد" : "Online - Active"}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsSupportOpen(false)}
+                    className="text-slate-400 hover:text-white transition-colors text-xs p-1 cursor-pointer"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {/* Messages list */}
+                <div className="flex-1 overflow-y-auto pr-1 space-y-3 mb-3 flex flex-col py-1">
+                  {activeSupportMessages.length === 0 ? (
+                    <div className="flex-1 flex flex-col items-center justify-center text-center p-4 my-auto">
+                      <div className="w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-2xl mb-2">
+                        💬
+                      </div>
+                      <h5 className="text-xs font-bold text-slate-300">
+                        {language === "ar" ? "أهلاً بك في الدعم المباشر" : "Welcome to Live Support"}
+                      </h5>
+                      <p className="text-[10px] text-slate-500 leading-normal mt-1 max-w-[200px]">
+                        {language === "ar"
+                          ? "اكتب استفسارك أو مشكلتك وسيقوم فريق الدعم بالرد عليك في أسرع وقت."
+                          : "Write your inquiry and our support team will reply as soon as possible."}
+                      </p>
+                    </div>
+                  ) : (
+                    activeSupportMessages.map((m) => {
+                      const isMsgFromMe = m.senderId === currentUser?.id;
+                      return (
+                        <div
+                          key={m.id}
+                          className={`flex flex-col max-w-[85%] ${
+                            isMsgFromMe ? "self-end items-end animate-fade-in" : "self-start items-start animate-fade-in"
+                          }`}
+                        >
+                          <div
+                            className={`rounded-2xl px-3 py-2 text-xs leading-normal select-text ${
+                              isMsgFromMe
+                                ? "bg-gradient-to-r from-amber-500 to-yellow-600 text-slate-950 font-medium rounded-tr-none"
+                                : "bg-slate-800 text-slate-100 rounded-tl-none"
+                            }`}
+                          >
+                            <p className="whitespace-pre-wrap break-words">{m.text}</p>
+                          </div>
+                          <span className="text-[8px] text-slate-500 font-mono mt-1 px-1">
+                            {m.createdAt ? new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ""}
+                          </span>
+                        </div>
+                      );
+                    })
+                  )}
+                  <div ref={supportMessagesEndRef} />
+                </div>
+
+                {/* Chat input form */}
+                <div className="border-t border-slate-800 pt-3 flex-shrink-0">
+                  <form
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      if (!supportInputText.trim() || isSendingSupport) return;
+                      setIsSendingSupport(true);
+                      const res = await sendSupportMessage(supportInputText);
+                      setIsSendingSupport(false);
+                      if (res.success) {
+                        setSupportInputText("");
+                      }
+                    }}
+                    className="flex items-center gap-2"
+                  >
+                    <input
+                      type="text"
+                      value={supportInputText}
+                      onChange={(e) => setSupportInputText(e.target.value)}
+                      placeholder={language === "ar" ? "اكتب رسالة هنا..." : "Type a message here..."}
+                      className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder:text-slate-600 focus:outline-hidden focus:border-amber-500 font-sans"
+                      disabled={isSendingSupport}
+                    />
+                    <button
+                      type="submit"
+                      disabled={isSendingSupport || !supportInputText.trim()}
+                      className="p-2 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-xl font-bold transition-all disabled:opacity-40 disabled:hover:bg-amber-500 active:scale-95 cursor-pointer flex-shrink-0"
+                    >
+                      {isSendingSupport ? (
+                        <div className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></div>
+                      ) : (
+                        <Send className="w-4 h-4" />
+                      )}
+                    </button>
+                  </form>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </PhoneFrame>
   );
 }

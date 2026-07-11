@@ -25,6 +25,7 @@ export interface User {
   totalCompletedTasks: number;
   invitationCode: string;
   referredBy?: string;
+  password?: string;
   createdAt: string;
   isAdmin?: boolean;
   withdrawalAddress?: string;
@@ -92,4 +93,26 @@ export interface TeamReport {
   level1Commission: number;
   level2Commission: number;
   level3Commission: number;
+}
+
+export interface SupportChat {
+  id: string;
+  userId: string;
+  username: string;
+  phone: string;
+  lastMessageText: string;
+  lastMessageTime: string;
+  unreadCountAdmin: number;
+  unreadCountUser: number;
+  updatedAt: string;
+  status: "open" | "closed";
+}
+
+export interface SupportMessage {
+  id: string;
+  senderId: string;
+  senderName: string;
+  text: string;
+  createdAt: string;
+  isAdmin: boolean;
 }
