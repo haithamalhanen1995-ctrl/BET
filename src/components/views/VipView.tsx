@@ -126,7 +126,7 @@ export const VipView: React.FC = () => {
 
         if (result.success) {
           setSuccessMessage(language === "ar"
-            ? `تم تقديم طلب ترقية VIP معلق بنجاح! انتقل إلى لوحة تحكم المسؤول (زر Admin بالأعلى) وقم بالموافقة على إيداع بقيمة $${depositAmount.toFixed(2)} للحصول على الترقية فوراً.`
+            ? `تم تقديم طلب الإيداع بنجاح. يرجى الانتظار حتى يقوم المسؤول بمراجعة معاملتك.`
             : `Pending upgrade request submitted! Use the ADMIN Dashboard (Admin button at top) to approve the $${depositAmount.toFixed(2)} deposit to instantly activate your tier.`);
           setTxHash("");
           setVipScreenshot("");
